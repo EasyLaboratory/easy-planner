@@ -97,6 +97,7 @@ bool exe_traj(const quadrotor_msgs::PolyTraj &trajMsg) {
     if (d_yaw_abs >= 0.02) {
       yaw = last_yaw_ + d_yaw / d_yaw_abs * 0.02;
     }
+    // 输出的量有位置，速度，加速度，航向角，航向角速度。
     publish_cmd(trajMsg.traj_id, p, v, a, yaw, 0);  // TODO yaw
     last_yaw_ = yaw;
     return true;
@@ -134,6 +135,7 @@ void cmdCallback(const ros::TimerEvent &e) {
   }
 }
 
+// 这个函数的功能是给rviz中的目标或者ego发送轨迹。
 int main(int argc, char **argv) {
   ros::init(argc, argv, "traj_server");
   ros::NodeHandle nh("~");

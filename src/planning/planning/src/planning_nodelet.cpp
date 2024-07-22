@@ -431,6 +431,7 @@ class Nodelet : public nodelet::Nodelet {
     visPtr_->visualize_traj(traj, "traj");
   }
 
+// 实际用到的时间回调函数
   void fake_timer_callback(const ros::TimerEvent& event) {
     heartbeat_pub_.publish(std_msgs::Empty());
     if (!odom_received_ || !map_received_) {
@@ -766,6 +767,7 @@ class Nodelet : public nodelet::Nodelet {
     replanState_pub_ = nh.advertise<quadrotor_msgs::ReplanState>("replanState", 1);
 
     if (debug_) {
+      std::cout << "now planning mode is debug!!!!!!!!!!!!" << std::endl;
       plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz), &Nodelet::debug_timer_callback, this);
       // TODO read debug data from files
       wr_msg::readMsg(replanStateMsg_, ros::package::getPath("planning") + "/../../../debug/replan_state.bin");
@@ -774,8 +776,10 @@ class Nodelet : public nodelet::Nodelet {
       prePtr_->setMap(*gridmapPtr_);
       std::cout << "plan state: " << replanStateMsg_.state << std::endl;
     } else if (fake_) {
+      std::cout << "now planning mode is fake!!!!!!!!!!!!" << std::endl;
       plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz), &Nodelet::fake_timer_callback, this);
     } else {
+      std::cout << "now planning mode is normal!!!!!!!!!!!!" << std::endl;
       plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz), &Nodelet::plan_timer_callback, this);
     }
     gridmap_sub_ = nh.subscribe<quadrotor_msgs::OccMap3d>("gridmap_inflate", 1, &Nodelet::gridmap_callback, this, ros::TransportHints().tcpNoDelay());

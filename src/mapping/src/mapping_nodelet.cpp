@@ -220,6 +220,7 @@ class Nodelet : public nodelet::Nodelet {
     if (!map_recieved_) {
       return;
     }
+    std::cout << "now we are here!!" << std::endl;
     quadrotor_msgs::OccMap3d gridmap_msg;
     gridmap_.to_msg(gridmap_msg);
     gridmap_inflate_pub_.publish(gridmap_msg);
