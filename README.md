@@ -16,6 +16,7 @@
 
 ## 1. Simulation of Aerial Tracking 
 
+
 [NOTE] remember to change the CUDA option of **src/uav_simulator/local_sensing/CMakeLists.txt**
 
 >Preparation and visualization:
