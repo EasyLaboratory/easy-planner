@@ -202,6 +202,7 @@ class Nodelet : public nodelet::Nodelet {
 
   // NOTE just for global map in simulation
   void map_call_back(const sensor_msgs::PointCloud2ConstPtr& msgPtr) {
+    std::cout << "now we are here---map_call_back!!" << std::endl;
     if (map_recieved_) {
       return;
     }
@@ -216,11 +217,40 @@ class Nodelet : public nodelet::Nodelet {
     map_recieved_ = true;
     return;
   }
+
+  // 得到空的地图的回调函数
+  void empty_map_call_back(const sensor_msgs::PointCloud2ConstPtr& msgPtr) {
+    std::cout << "now we are here---map_call_back!!" << std::endl;
+    if (map_recieved_) {
+      return;
+    }
+
+    // 将接收到的点云数据转换为 pcl::PointCloud 格式
+    pcl::PointCloud<pcl::PointXYZ> point_cloud;
+    pcl::fromROSMsg(*msgPtr, point_cloud);
+
+    // 清空点云数据
+    point_cloud.clear();
+
+    // 更新 gridmap_ 数据结构
+    for (const auto& pt : point_cloud) {
+      Eigen::Vector3d p(pt.x, pt.y, pt.z);
+      gridmap_.setOcc(p);
+    }
+
+    // 对地图进行膨胀处理
+    gridmap_.inflate(inflate_size_);
+
+    ROS_WARN("[mapping] GLOBAL MAP RECEIVED!");
+    map_recieved_ = true;
+    return;
+  }
+
   void global_map_timer_callback(const ros::TimerEvent& event) {
     if (!map_recieved_) {
       return;
     }
-    std::cout << "now we are here!!" << std::endl;
+    std::cout << "now we are here---global_map_timer_callback!!" << std::endl;
     quadrotor_msgs::OccMap3d gridmap_msg;
     gridmap_.to_msg(gridmap_msg);
     gridmap_inflate_pub_.publish(gridmap_msg);
@@ -294,9 +324,11 @@ class Nodelet : public nodelet::Nodelet {
     pcl_pub_ = nh.advertise<sensor_msgs::PointCloud2>("mask_cloud", 10);
 
     if (use_global_map_) {
-      map_pc_sub_ = nh.subscribe<sensor_msgs::PointCloud2>("global_map", 1, &Nodelet::map_call_back, this);
+      std::cout << "use_global_map_" << std::endl;
+      map_pc_sub_ = nh.subscribe<sensor_msgs::PointCloud2>("global_map", 1, &Nodelet::empty_map_call_back, this);
       global_map_timer_ = nh.createTimer(ros::Duration(1.0), &Nodelet::global_map_timer_callback, this);
     } else {
+      std::cout << "else...+++++++++++++++++++" << std::endl;
       depth_sub_.subscribe(nh, "depth", 1);
       odom_sub_.subscribe(nh, "odom", 50);
       depth_odom_sync_Ptr_ = std::make_shared<ImageOdomSynchronizer>(ImageOdomSyncPolicy(100), depth_sub_, odom_sub_);

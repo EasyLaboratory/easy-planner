@@ -68,7 +68,8 @@ main(int argc, char** argv)
   ros::Publisher pcl_pub =
     nh.advertise<sensor_msgs::PointCloud2>("mock_map", 1);
   pcl::PointCloud<pcl::PointXYZ> cloud;
-  sensor_msgs::PointCloud2       output;
+  sensor_msgs::PointCloud2 output;
+  sensor_msgs::PointCloud2 empty_output;
   // Fill in the cloud data
 
   int seed;
@@ -107,6 +108,7 @@ main(int argc, char** argv)
   info.cloud      = &cloud;
 
   mocka::Maps map;
+  // 在这儿给地图赋值数据
   map.setInfo(info);
   map.generate(type);
 
@@ -116,7 +118,8 @@ main(int argc, char** argv)
   ros::Rate loop_rate(update_freq);
   while (ros::ok())
   {
-    pcl_pub.publish(output);
+    // pcl_pub.publish(output);
+    pcl_pub.publish(empty_output);
     ros::spinOnce();
     loop_rate.sleep();
   }

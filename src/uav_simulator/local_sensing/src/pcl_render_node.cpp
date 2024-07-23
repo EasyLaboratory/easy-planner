@@ -160,7 +160,7 @@ void rcvGlobalPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map)
   depth_hostptr = (int *)malloc(width * height * sizeof(int));
 
   has_global_map = true;
-  // ROS_ERROR("GLOBAL!!!!");
+  ROS_ERROR("GLOBAL!!!!");
 }
 
 void rcvLocalPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map) {

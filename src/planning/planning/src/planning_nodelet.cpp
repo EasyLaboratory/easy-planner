@@ -670,6 +670,7 @@ class Nodelet : public nodelet::Nodelet {
     std::vector<Eigen::Vector3d> visible_ps;
     std::vector<double> thetas;
     Trajectory traj;
+    // planning 结果都是在这儿可视化的。
     if (generate_new_traj_success) {
       visPtr_->visualize_path(path, "astar");
       // NOTE generate visible regions
