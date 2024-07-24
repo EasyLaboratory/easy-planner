@@ -23,6 +23,7 @@ std::shared_ptr<Ekf> ekfPtr_;
 
 void predict_state_callback(const ros::TimerEvent& event) {
   double update_dt = (ros::Time::now() - last_update_stamp_).toSec();
+  std::cout << "predict_state_callback----------" << std::endl;
   if (update_dt < 2.0) {
     ekfPtr_->predict();
   } else {

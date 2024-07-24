@@ -251,14 +251,15 @@ class Nodelet : public nodelet::Nodelet {
 
     // NOTE prediction
     std::vector<Eigen::Vector3d> target_predcit;
-    // ros::Time t_start = ros::Time::now();
+    ros::Time t_start = ros::Time::now();
     bool generate_new_traj_success = prePtr_->predict(target_p, target_v, target_predcit);
-    // ros::Time t_stop = ros::Time::now();
-    // std::cout << "predict costs: " << (t_stop - t_start).toSec() * 1e3 << "ms" << std::endl;
+    ros::Time t_stop = ros::Time::now();
+    std::cout << "predict costs: " << (t_stop - t_start).toSec() * 1e3 << "ms" << std::endl;
     if (generate_new_traj_success) {
       Eigen::Vector3d observable_p = target_predcit.back();
       visPtr_->visualize_path(target_predcit, "car_predict");
       std::vector<Eigen::Vector3d> observable_margin;
+      // tracking_dist_ = 2.0
       for (double theta = 0; theta <= 2 * M_PI; theta += 0.01) {
         observable_margin.emplace_back(observable_p + tracking_dist_ * Eigen::Vector3d(cos(theta), sin(theta), 0));
       }
@@ -701,7 +702,7 @@ class Nodelet : public nodelet::Nodelet {
       finState.setZero(3, 3);
       finState.col(0) = path.back();
       finState.col(1) = target_v;
-
+    // 期望轨迹是从这儿拿的
       generate_new_traj_success = trajOptPtr_->generate_traj(iniState, finState,
                                                              target_predcit, visible_ps, thetas,
                                                              hPolys, traj);

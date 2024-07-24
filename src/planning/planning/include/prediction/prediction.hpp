@@ -35,14 +35,19 @@ struct Predict {
   NodePtr data[MAX_MEMORY];
   int stack_top;
 
+// 判断位置和速度是否合理
   inline bool isValid(const Eigen::Vector3d& p, const Eigen::Vector3d& v) const {
     return (v.norm() < vmax) && (!map.isOccupied(p));
   }
 
  public:
   inline Predict(ros::NodeHandle& nh) {
+    // pre_dur = 3.0
+    // 颗粒度是0.2s
     nh.getParam("tracking_dur", pre_dur);
     nh.getParam("tracking_dt", dt);
+    // rho_a = 1.0
+    // 加速度的评分评分权重系数
     nh.getParam("prediction/rho_a", rho_a);
     nh.getParam("prediction/vmax", vmax);
     for (int i = 0; i < MAX_MEMORY; ++i) {
@@ -54,18 +59,22 @@ struct Predict {
     // map.inflate_last();
   }
 
+// 实际用到的输出预测轨迹的代码。
   inline bool predict(const Eigen::Vector3d& target_p,
                       const Eigen::Vector3d& target_v,
                       std::vector<Eigen::Vector3d>& target_predcit,
                       const double& max_time = 0.1) {
+    // 根据加速度最小打分
     auto score = [&](const NodePtr& ptr) -> double {
       return rho_a * ptr->a.norm();
     };
     Eigen::Vector3d end_p = target_p + target_v * pre_dur;
+    // 定义一个lambda表达式，用于计算节点的启发式值，基于节点位置和预测结束位置的距离
     auto calH = [&](const NodePtr& ptr) -> double {
       return 0.001 * (ptr->p - end_p).norm();
     };
     ros::Time t_start = ros::Time::now();
+    // 定义好的比较方式，用了一个优先队列来完成这个事情。
     std::priority_queue<NodePtr, std::vector<NodePtr>, NodeComparator> open_set;
 
     Eigen::Vector3d input(0, 0, 0);
@@ -80,18 +89,22 @@ struct Predict {
     curPtr->h = 0;
     curPtr->t = 0;
     double dt2_2 = dt * dt / 2;
+    // 做了一个采样，根据加速度上下限制-3到+3采样。
     while (curPtr->t < pre_dur) {
       for (input.x() = -3; input.x() <= 3; input.x() += 3)
         for (input.y() = -3; input.y() <= 3; input.y() += 3) {
+          // 位置和速度作匀加速运动的预测。
           Eigen::Vector3d p = curPtr->p + curPtr->v * dt + input * dt2_2;
           Eigen::Vector3d v = curPtr->v + input * dt;
           if (!isValid(p, v)) {
             continue;
           }
+          // 检查是否超出内存限制
           if (stack_top == MAX_MEMORY) {
             std::cout << "[prediction] out of memory!" << std::endl;
             return false;
           }
+          // 检查是否超过最大允许时间
           double t_cost = (ros::Time::now() - t_start).toSec();
           if (t_cost > max_time) {
             std::cout << "[prediction] too slow!" << std::endl;
@@ -103,6 +116,7 @@ struct Predict {
           ptr->a = input;
           ptr->parent = curPtr;
           ptr->t = curPtr->t + dt;
+          // 对分数做累加
           ptr->score = curPtr->score + score(ptr);
           ptr->h = calH(ptr);
           open_set.push(ptr);
@@ -116,6 +130,7 @@ struct Predict {
       open_set.pop();
     }
     target_predcit.clear();
+    // 逆向回溯路径，并将路径节点位置加入预测结果向量
     while (curPtr != nullptr) {
       target_predcit.push_back(curPtr->p);
       curPtr = curPtr->parent;
