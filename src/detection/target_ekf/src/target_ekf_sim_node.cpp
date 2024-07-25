@@ -21,9 +21,10 @@ bool check_fov_ = false;
 
 std::shared_ptr<Ekf> ekfPtr_;
 
+// 定时启动的回调函数
 void predict_state_callback(const ros::TimerEvent& event) {
   double update_dt = (ros::Time::now() - last_update_stamp_).toSec();
-  std::cout << "predict_state_callback----------" << std::endl;
+  // std::cout << "predict_state_callback----------" << std::endl;
   if (update_dt < 2.0) {
     ekfPtr_->predict();
   } else {
@@ -49,6 +50,7 @@ void predict_state_callback(const ros::TimerEvent& event) {
   target_odom_pub_.publish(target_odom);
 }
 
+// 同步处理yolo和odom的回调函数
 void update_state_callback(const nav_msgs::OdometryConstPtr& target_msg, const nav_msgs::OdometryConstPtr& odom_msg) {
   // std::cout << "yolo stamp: " << bboxes_msg->header.stamp << std::endl;
   // std::cout << "odom stamp: " << odom_msg->header.stamp << std::endl;
@@ -76,7 +78,9 @@ void update_state_callback(const nav_msgs::OdometryConstPtr& target_msg, const n
   Eigen::Vector3d rpy = quaternion2euler(q);
 
   // NOTE check whether it's in FOV
+  // check_fov_ = false 这个函数没有进来
   if (check_fov_) {
+    // std::cout << "check_fov_check_fov_check_fov_check_fov_check_fov_check_fov_: " << std::endl;
     Eigen::Vector3d p_in_body = cam_q.inverse() * (p - cam_p);
     if (p_in_body.z() < 0.1 || p_in_body.z() > 5.0) {
       return;
@@ -97,7 +101,7 @@ void update_state_callback(const nav_msgs::OdometryConstPtr& target_msg, const n
     ekfPtr_->reset(p, rpy);
     ROS_WARN("[ekf] reset!");
   } else if (ekfPtr_->update(p, rpy)) {
-    // ROS_WARN("[ekf] update!");
+    ROS_WARN("[ekf] update!");
   } else {
     ROS_ERROR("[ekf] update invalid!");
     return;
@@ -106,7 +110,7 @@ void update_state_callback(const nav_msgs::OdometryConstPtr& target_msg, const n
 }
 
 void odom_callback(const nav_msgs::OdometryConstPtr& odom_msg) {
-  // std::cout << "_now stamp: " << odom_msg->header.stamp << std::endl;
+  // std::cout << "sim ism ism ism s is s w s " << odom_msg->header.stamp << std::endl;
 }
 
 int main(int argc, char** argv) {
@@ -114,6 +118,7 @@ int main(int argc, char** argv) {
   ros::NodeHandle nh("~");
   last_update_stamp_ = ros::Time::now() - ros::Duration(10.0);
 
+  // 关于相机的参数
   std::vector<double> tmp;
   if (nh.param<std::vector<double>>("cam2body_R", tmp, std::vector<double>())) {
     cam2body_R_ = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(tmp.data(), 3, 3);
@@ -129,23 +134,29 @@ int main(int argc, char** argv) {
   nh.getParam("cam_height", height_);
   nh.getParam("pitch_thr", pitch_thr_);
   nh.getParam("check_fov", check_fov_);
+  std::cout << "check_fov_=========" << check_fov_ << std::endl;
 
   message_filters::Subscriber<nav_msgs::Odometry> yolo_sub_;
   message_filters::Subscriber<nav_msgs::Odometry> odom_sub_;
   std::shared_ptr<YoloOdomSynchronizer> yolo_odom_sync_Ptr_;
   ros::Timer ekf_predict_timer_;
   ros::Subscriber single_odom_sub = nh.subscribe("odom", 100, &odom_callback, ros::TransportHints().tcpNoDelay());
+  // 这是卡尔曼滤波完之后发布出去的目标点的位姿信息
   target_odom_pub_ = nh.advertise<nav_msgs::Odometry>("target_odom", 1);
+  // 这个没有被用到
   yolo_odom_pub_ = nh.advertise<nav_msgs::Odometry>("yolo_odom", 1);
 
   int ekf_rate = 20;
   nh.getParam("ekf_rate", ekf_rate);
   ekfPtr_ = std::make_shared<Ekf>(1.0 / ekf_rate);
 
+  // 订阅 YOLO 和 Odom 的里程计消息，并在这些消息同步到达时调用 update_state_callback 函数。
   yolo_sub_.subscribe(nh, "yolo", 1, ros::TransportHints().tcpNoDelay());
   odom_sub_.subscribe(nh, "odom", 100, ros::TransportHints().tcpNoDelay());
   yolo_odom_sync_Ptr_ = std::make_shared<YoloOdomSynchronizer>(YoloOdomSyncPolicy(200), yolo_sub_, odom_sub_);
   yolo_odom_sync_Ptr_->registerCallback(boost::bind(&update_state_callback, _1, _2));
+
+  // 每隔这个时间调用一次预测轨迹函数ros::Duration(1.0 / ekf_rate) = 0.05s，频率就是20Hz。
   ekf_predict_timer_ = nh.createTimer(ros::Duration(1.0 / ekf_rate), &predict_state_callback);
 
   ros::spin();

@@ -180,7 +180,7 @@ void update_state_callback(const object_detection_msgs::BoundingBoxesConstPtr &b
 }
 
 void odom_callback(const nav_msgs::OdometryConstPtr &odom_msg) {
-  // std::cout << "_now stamp: " << odom_msg->header.stamp << std::endl;
+  // std::cout << "real real real real " << odom_msg->header.stamp << std::endl;
 }
 
 int main(int argc, char** argv) {

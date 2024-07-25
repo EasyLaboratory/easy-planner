@@ -148,7 +148,7 @@ class Nodelet : public nodelet::Nodelet {
     gridmap_lock_.clear();
   }
 
-  // NOTE main callback
+  // NOTE main callback 无人机用到的回调函数
   void plan_timer_callback(const ros::TimerEvent& event) {
     heartbeat_pub_.publish(std_msgs::Empty());
     if (!odom_received_ || !map_received_) {
@@ -235,8 +235,7 @@ class Nodelet : public nodelet::Nodelet {
     }
 
     // NOTE obtain map
-    while (gridmap_lock_.test_and_set())
-      ;
+    while (gridmap_lock_.test_and_set());
     gridmapPtr_->from_msg(map_msg_);
     replanStateMsg_.occmap = map_msg_;
     gridmap_lock_.clear();
@@ -260,6 +259,7 @@ class Nodelet : public nodelet::Nodelet {
       visPtr_->visualize_path(target_predcit, "car_predict");
       std::vector<Eigen::Vector3d> observable_margin;
       // tracking_dist_ = 2.0
+      // 这儿的目的是维护一个目标位置的圈。
       for (double theta = 0; theta <= 2 * M_PI; theta += 0.01) {
         observable_margin.emplace_back(observable_p + tracking_dist_ * Eigen::Vector3d(cos(theta), sin(theta), 0));
       }
@@ -300,11 +300,14 @@ class Nodelet : public nodelet::Nodelet {
     // double t_path = 0;
 
     if (generate_new_traj_success) {
+      // std::cout << "generate_new_traj_successs!!!" << std::endl;
       // ros::Time t_front0 = ros::Time::now();
       if (land_triger_received_) {
+        // std::cout << "land_triger_received_!!!" << std::endl;
         generate_new_traj_success = envPtr_->short_astar(p_start, target_p, path);
       } else {
-        generate_new_traj_success = envPtr_->findVisiblePath(p_start, target_predcit, way_pts, path);
+        // std::cout << "generate_new_traj_success = envPtr_->findVisiblePath(p_start, target_predcit, way_pts, path);" << std::endl;
+          generate_new_traj_success = envPtr_->findVisiblePath(p_start, target_predcit, way_pts, path);
       }
       // ros::Time t_end0 = ros::Time::now();
       // t_path += (t_end0 - t_front0).toSec() * 1e3;
@@ -432,7 +435,7 @@ class Nodelet : public nodelet::Nodelet {
     visPtr_->visualize_traj(traj, "traj");
   }
 
-// 实际用到的时间回调函数
+// 目标实际用到的时间回调函数
   void fake_timer_callback(const ros::TimerEvent& event) {
     heartbeat_pub_.publish(std_msgs::Empty());
     if (!odom_received_ || !map_received_) {
@@ -702,7 +705,7 @@ class Nodelet : public nodelet::Nodelet {
       finState.setZero(3, 3);
       finState.col(0) = path.back();
       finState.col(1) = target_v;
-    // 期望轨迹是从这儿拿的
+      // 期望轨迹是从这儿拿的
       generate_new_traj_success = trajOptPtr_->generate_traj(iniState, finState,
                                                              target_predcit, visible_ps, thetas,
                                                              hPolys, traj);

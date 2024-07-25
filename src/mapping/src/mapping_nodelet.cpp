@@ -202,7 +202,7 @@ class Nodelet : public nodelet::Nodelet {
 
   // NOTE just for global map in simulation
   void map_call_back(const sensor_msgs::PointCloud2ConstPtr& msgPtr) {
-    std::cout << "now we are here---map_call_back!!" << std::endl;
+    // std::cout << "now we are here---map_call_back!!" << std::endl;
     if (map_recieved_) {
       return;
     }
@@ -220,7 +220,7 @@ class Nodelet : public nodelet::Nodelet {
 
   // 得到空的地图的回调函数
   void empty_map_call_back(const sensor_msgs::PointCloud2ConstPtr& msgPtr) {
-    std::cout << "now we are here---map_call_back!!" << std::endl;
+    // std::cout << "now we are here---map_call_back!!" << std::endl;
     if (map_recieved_) {
       return;
     }
@@ -250,7 +250,7 @@ class Nodelet : public nodelet::Nodelet {
     if (!map_recieved_) {
       return;
     }
-    std::cout << "now we are here---global_map_timer_callback!!" << std::endl;
+    // std::cout << "now we are here---global_map_timer_callback!!" << std::endl;
     quadrotor_msgs::OccMap3d gridmap_msg;
     gridmap_.to_msg(gridmap_msg);
     gridmap_inflate_pub_.publish(gridmap_msg);

@@ -143,8 +143,10 @@ int main(int argc, char **argv) {
   ros::Subscriber poly_traj_sub = nh.subscribe("trajectory", 10, polyTrajCallback);
   ros::Subscriber heartbeat_sub = nh.subscribe("heartbeat", 10, heartbeatCallback);
 
+  // 实际的轨迹点是从这儿发出去的。
   pos_cmd_pub_ = nh.advertise<quadrotor_msgs::PositionCommand>("position_cmd", 50);
 
+  // 定时去收位置请求。
   ros::Timer cmd_timer = nh.createTimer(ros::Duration(0.01), cmdCallback);
 
   ros::Duration(1.0).sleep();

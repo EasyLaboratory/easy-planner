@@ -382,6 +382,7 @@ class Env {
     visCorridor(decompPolys);
   }
 
+  // 碰撞检查：检查从idx0到idx1的路径上是否产生碰撞。
   bool rayValid(const Eigen::Vector3i& idx0, const Eigen::Vector3i& idx1) {
     Eigen::Vector3i d_idx = idx1 - idx0;
     Eigen::Vector3i step = d_idx.array().sign().cast<int>();
@@ -407,6 +408,7 @@ class Env {
     return true;
   };
 
+  // 基于A*算法的三维路径搜索
   inline bool findVisiblePath(const Eigen::Vector3i& start_idx,
                               const Eigen::Vector3i& end_idx,
                               std::vector<Eigen::Vector3i>& idx_path) {
@@ -518,6 +520,7 @@ class Env {
     Eigen::Vector3i start_idx = mapPtr_->pos2idx(start_p);
     std::vector<Eigen::Vector3i> idx_path;
     path.push_back(start_p);
+    // 给每一个点在这个轨迹上找一个目标点
     for (const auto& target : targets) {
       Eigen::Vector3i end_idx = mapPtr_->pos2idx(target);
       idx_path.clear();
