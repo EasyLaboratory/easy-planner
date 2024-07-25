@@ -6,3 +6,10 @@ debug
 bags
 *.bag
 *.bag.active
+devel
+build
+.vscode
+.catkin_tools
+figs
+src/perception/models/yolov8n_v1.pt
+src/perception/myenv

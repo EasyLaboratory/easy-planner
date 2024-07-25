@@ -1,0 +1,12 @@
+       
+
+<launch>
+
+
+    <node name="example" pkg="traj_server" type="example" output="screen">
+    </node>     
+
+    <!-- <node name="cmd2airsim" pkg="traj_server" type="cmd2airsim" output="screen" >
+    </node> -->
+
+</launch>
