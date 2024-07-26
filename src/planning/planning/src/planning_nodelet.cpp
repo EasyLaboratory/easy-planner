@@ -138,7 +138,7 @@ class Nodelet : public nodelet::Nodelet {
     // odom_msg_.pose.postion.z = -tmp_msg.pose.postion.z;
     // odom_msg_.pose.postion.x = tmp_msg.pose.postion.y;
     // odom_msg_.pose.postion.y = tmp_msg.pose.postion.x;
-    ROS_INFO("Position: (%f, %f, %f)", msgPtr->pose.pose.position.x, msgPtr->pose.pose.position.y, msgPtr->pose.pose.position.z);
+    // ROS_INFO("Position: (%f, %f, %f)", msgPtr->pose.pose.position.x, msgPtr->pose.pose.position.y, msgPtr->pose.pose.position.z);
     odom_received_ = true;
     odom_lock_.clear();
   }
@@ -444,7 +444,195 @@ class Nodelet : public nodelet::Nodelet {
     visPtr_->visualize_traj(traj, "traj");
   }
 
-// 目标实际用到的时间回调函数
+  void airsim_fake_timer_callback(const ros::TimerEvent& event) {
+    heartbeat_pub_.publish(std_msgs::Empty());
+    if (!odom_received_ || !map_received_) {
+      return;
+    }
+    // obtain state of odom
+    while (odom_lock_.test_and_set());
+    // 拿到ego的定位信息
+    auto odom_msg = odom_msg_;
+    odom_lock_.clear();
+    Eigen::Vector3d odom_p(odom_msg.pose.pose.position.x,
+                           odom_msg.pose.pose.position.y,
+                           odom_msg.pose.pose.position.z);
+    Eigen::Vector3d odom_v(odom_msg.twist.twist.linear.x,
+                           odom_msg.twist.twist.linear.y,
+                           odom_msg.twist.twist.linear.z);
+    if (!triger_received_) {
+      return;
+    }
+    // NOTE force-hover: waiting for the speed of drone small enough
+    if (force_hover_ && odom_v.norm() > 0.1) {
+      return;
+    }
+    // NOTE local goal
+    Eigen::Vector3d local_goal;
+    Eigen::Vector3d delta = goal_ - odom_p;
+    std::cout << "delta.norm() = " << delta.norm() << std::endl;
+    if (delta.norm() < 15) {
+      std::cout << "if (delta.norm() < 15)" << delta.norm() << std::endl;
+      local_goal = goal_;
+    } else {
+      std::cout << "else if (delta.norm() < 15)" << delta.norm() << std::endl;
+      local_goal = delta.normalized() * 15 + odom_p;
+    }
+    // 打印 odom_p 的值
+    std::cout << "Odom position: "
+              << "x: " << odom_p.x() << ", "
+              << "y: " << odom_p.y() << ", "
+              << "z: " << odom_p.z() << std::endl;
+    // NOTE obtain map
+    while (gridmap_lock_.test_and_set());
+    gridmapPtr_->from_msg(map_msg_);
+    replanStateMsg_.occmap = map_msg_;
+    gridmap_lock_.clear();
+
+    // NOTE determin whether to replan
+    bool no_need_replan = false;
+    if (!force_hover_ && !wait_hover_) {
+      double last_traj_t_rest = traj_poly_.getTotalDuration() - (ros::Time::now() - replan_stamp_).toSec();
+      bool new_goal = (local_goal - traj_poly_.getPos(traj_poly_.getTotalDuration())).norm() > tracking_dist_;
+      if (!new_goal) {
+        if (last_traj_t_rest < 1.0) {
+          ROS_WARN("[planner] NEAR GOAL...");
+          no_need_replan = true;
+        } else if (validcheck(traj_poly_, replan_stamp_, last_traj_t_rest)) {
+          ROS_WARN("[planner] NO NEED REPLAN...");
+          double t_delta = traj_poly_.getTotalDuration() < 1.0 ? traj_poly_.getTotalDuration() : 1.0;
+          double t_yaw = (ros::Time::now() - replan_stamp_).toSec() + t_delta;
+          Eigen::Vector3d un_known_p = traj_poly_.getPos(t_yaw);
+          Eigen::Vector3d dp = un_known_p - odom_p;
+          double yaw = std::atan2(dp.y(), dp.x());
+          pub_traj(traj_poly_, yaw, replan_stamp_);
+          no_need_replan = true;
+        }
+      }
+    }
+    // NOTE determin whether to pub hover
+    if ((goal_ - odom_p).norm() < tracking_dist_ + tolerance_d_ && odom_v.norm() < 0.1) {
+      if (!wait_hover_) {
+        pub_hover_p(odom_p, ros::Time::now());
+        wait_hover_ = true;
+      }
+      ROS_WARN("[planner] HOVERING...");
+      replanStateMsg_.state = -1;
+      replanState_pub_.publish(replanStateMsg_);
+      return;
+    } else {
+      wait_hover_ = false;
+    }
+    if (no_need_replan) {
+      return;
+    }
+
+    // NOTE replan state
+    Eigen::MatrixXd iniState;
+    iniState.setZero(3, 3);
+    ros::Time replan_stamp = ros::Time::now() + ros::Duration(0.03);
+    double replan_t = (replan_stamp - replan_stamp_).toSec();
+    if (force_hover_ || replan_t > traj_poly_.getTotalDuration()) {
+      // should replan from the hover state
+      iniState.col(0) = odom_p;
+      iniState.col(1) = odom_v;
+    } else {
+      // should replan from the last trajectory
+      iniState.col(0) = traj_poly_.getPos(replan_t);
+      iniState.col(1) = traj_poly_.getVel(replan_t);
+      iniState.col(2) = traj_poly_.getAcc(replan_t);
+    }
+    replanStateMsg_.header.stamp = ros::Time::now();
+    replanStateMsg_.iniState.resize(9);
+    Eigen::Map<Eigen::MatrixXd>(replanStateMsg_.iniState.data(), 3, 3) = iniState;
+
+    // NOTE generate an extra corridor
+    Eigen::Vector3d p_start = iniState.col(0);
+    bool need_extra_corridor = iniState.col(1).norm() > 1.0;
+    Eigen::MatrixXd hPoly;
+    std::pair<Eigen::Vector3d, Eigen::Vector3d> line;
+    if (need_extra_corridor) {
+      Eigen::Vector3d v_norm = iniState.col(1).normalized();
+      line.first = p_start;
+      double step = 0.1;
+      for (double dx = step; dx < 1.0; dx += step) {
+        p_start += step * v_norm;
+        if (gridmapPtr_->isOccupied(p_start)) {
+          p_start -= step * v_norm;
+          break;
+        }
+      }
+      line.second = p_start;
+      envPtr_->generateOneCorridor(line, 2.0, hPoly);
+    }
+    // NOTE path searching
+    std::vector<Eigen::Vector3d> path;
+    bool generate_new_traj_success = envPtr_->astar_search(p_start, local_goal, path);
+    Trajectory traj;
+    if (generate_new_traj_success) {
+      visPtr_->visualize_path(path, "astar");
+      // NOTE corridor generating
+      std::vector<Eigen::MatrixXd> hPolys;
+      std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> keyPts;
+      envPtr_->generateSFC(path, 2.0, hPolys, keyPts);
+      if (need_extra_corridor) {
+        hPolys.insert(hPolys.begin(), hPoly);
+        keyPts.insert(keyPts.begin(), line);
+      }
+      envPtr_->visCorridor(hPolys);
+      visPtr_->visualize_pairline(keyPts, "keyPts");
+
+      // NOTE trajectory optimization
+      Eigen::MatrixXd finState;
+      finState.setZero(3, 3);
+      finState.col(0) = path.back();
+      // return;
+      generate_new_traj_success = trajOptPtr_->generate_traj(iniState, finState, hPolys, traj);
+      visPtr_->visualize_traj(traj, "traj");
+    }
+
+    // NOTE collision check
+    bool valid = false;
+    if (generate_new_traj_success) {
+      valid = validcheck(traj, replan_stamp);
+    } else {
+      replanStateMsg_.state = -2;
+      replanState_pub_.publish(replanStateMsg_);
+    }
+    if (valid) {
+      force_hover_ = false;
+      ROS_WARN("[planner] REPLAN SUCCESS");
+      replanStateMsg_.state = 0;
+      replanState_pub_.publish(replanStateMsg_);
+      // NOTE : if the trajectory is known, watch that direction
+      Eigen::Vector3d un_known_p = traj.getPos(traj.getTotalDuration() < 1.0 ? traj.getTotalDuration() : 1.0);
+      Eigen::Vector3d dp = un_known_p - odom_p;
+      double yaw = std::atan2(dp.y(), dp.x());
+      pub_traj(traj, yaw, replan_stamp);
+      traj_poly_ = traj;
+      replan_stamp_ = replan_stamp;
+    } else if (force_hover_) {
+      ROS_ERROR("[planner] REPLAN FAILED, HOVERING...");
+      replanStateMsg_.state = 1;
+      replanState_pub_.publish(replanStateMsg_);
+      return;
+    } else if (!validcheck(traj_poly_, replan_stamp_)) {
+      force_hover_ = true;
+      ROS_FATAL("[planner] EMERGENCY STOP!!!");
+      replanStateMsg_.state = 2;
+      replanState_pub_.publish(replanStateMsg_);
+      pub_hover_p(iniState.col(0), replan_stamp);
+      return;
+    } else {
+      ROS_ERROR("[planner] REPLAN FAILED, EXECUTE LAST TRAJ...");
+      replanStateMsg_.state = 3;
+      replanState_pub_.publish(replanStateMsg_);
+      return;  // current generated traj invalid but last is valid
+    }
+    visPtr_->visualize_traj(traj, "traj");
+  }
+
+  // 目标实际用到的时间回调函数
   void fake_timer_callback(const ros::TimerEvent& event) {
     heartbeat_pub_.publish(std_msgs::Empty());
     if (!odom_received_ || !map_received_) {
@@ -478,8 +666,7 @@ class Nodelet : public nodelet::Nodelet {
     }
 
     // NOTE obtain map
-    while (gridmap_lock_.test_and_set())
-      ;
+    while (gridmap_lock_.test_and_set());
     gridmapPtr_->from_msg(map_msg_);
     replanStateMsg_.occmap = map_msg_;
     gridmap_lock_.clear();
@@ -790,7 +977,7 @@ class Nodelet : public nodelet::Nodelet {
       std::cout << "plan state: " << replanStateMsg_.state << std::endl;
     } else if (fake_) {
       std::cout << "now planning mode is fake!!!!!!!!!!!!" << std::endl;
-      plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz), &Nodelet::fake_timer_callback, this);
+      plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz), &Nodelet::airsim_fake_timer_callback, this);
     } else {
       std::cout << "now planning mode is normal!!!!!!!!!!!!" << std::endl;
       plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz), &Nodelet::plan_timer_callback, this);
