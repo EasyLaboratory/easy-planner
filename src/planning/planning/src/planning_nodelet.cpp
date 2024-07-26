@@ -123,15 +123,25 @@ class Nodelet : public nodelet::Nodelet {
     land_triger_received_ = true;
   }
 
-// 
+// ego的定位信息，需要从airsim去更新
   void odom_callback(const nav_msgs::Odometry::ConstPtr& msgPtr) {
-    while (odom_lock_.test_and_set())
-      ;
+    while (odom_lock_.test_and_set());
     odom_msg_ = *msgPtr;
     odom_received_ = true;
     odom_lock_.clear();
   }
 
+  void airsim_odom_callback(const nav_msgs::Odometry::ConstPtr& msgPtr) {
+    while (odom_lock_.test_and_set());
+    auto tmp_msg = *msgPtr;
+    odom_msg_ = tmp_msg;
+    // odom_msg_.pose.postion.z = -tmp_msg.pose.postion.z;
+    // odom_msg_.pose.postion.x = tmp_msg.pose.postion.y;
+    // odom_msg_.pose.postion.y = tmp_msg.pose.postion.x;
+    ROS_INFO("Position: (%f, %f, %f)", msgPtr->pose.pose.position.x, msgPtr->pose.pose.position.y, msgPtr->pose.pose.position.z);
+    odom_received_ = true;
+    odom_lock_.clear();
+  }
   void target_callback(const nav_msgs::Odometry::ConstPtr& msgPtr) {
     while (target_lock_.test_and_set())
       ;
@@ -176,8 +186,7 @@ class Nodelet : public nodelet::Nodelet {
       return;
     }
     // NOTE obtain state of target
-    while (target_lock_.test_and_set())
-      ;
+    while (target_lock_.test_and_set());
     replanStateMsg_.target = target_msg_;
     target_lock_.clear();
     Eigen::Vector3d target_p(replanStateMsg_.target.pose.pose.position.x,
@@ -442,8 +451,7 @@ class Nodelet : public nodelet::Nodelet {
       return;
     }
     // obtain state of odom
-    while (odom_lock_.test_and_set())
-      ;
+    while (odom_lock_.test_and_set());
     auto odom_msg = odom_msg_;
     odom_lock_.clear();
     Eigen::Vector3d odom_p(odom_msg.pose.pose.position.x,
@@ -788,7 +796,9 @@ class Nodelet : public nodelet::Nodelet {
       plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz), &Nodelet::plan_timer_callback, this);
     }
     gridmap_sub_ = nh.subscribe<quadrotor_msgs::OccMap3d>("gridmap_inflate", 1, &Nodelet::gridmap_callback, this, ros::TransportHints().tcpNoDelay());
-    odom_sub_ = nh.subscribe<nav_msgs::Odometry>("odom", 10, &Nodelet::odom_callback, this, ros::TransportHints().tcpNoDelay());
+    // 修改成从airsim中读取位置信息
+    // odom_sub_ = nh.subscribe<nav_msgs::Odometry>("odom", 10, &Nodelet::odom_callback, this, ros::TransportHints().tcpNoDelay());
+    odom_sub_ = nh.subscribe<nav_msgs::Odometry>("/airsim_node/drone_1/odom_local_ned", 10, &Nodelet::airsim_odom_callback, this, ros::TransportHints().tcpNoDelay());
     target_sub_ = nh.subscribe<nav_msgs::Odometry>("target", 10, &Nodelet::target_callback, this, ros::TransportHints().tcpNoDelay());
     triger_sub_ = nh.subscribe<geometry_msgs::PoseStamped>("triger", 10, &Nodelet::triger_callback, this, ros::TransportHints().tcpNoDelay());
     land_triger_sub_ = nh.subscribe<geometry_msgs::PoseStamped>("land_triger", 10, &Nodelet::land_triger_callback, this, ros::TransportHints().tcpNoDelay());

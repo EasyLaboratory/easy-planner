@@ -95,7 +95,7 @@ void traj_server_callback(const trajectory_msgs::TrajectoryPoint& msg) {
                                point_position.y(),
                                point_position.z(),
                                velocity,0.1,drivetrain_, 
-                               msr::airlib::YawMode(true, tf::getYaw(target_point.pose.orientation) * 180 / M_PI));
+                               msr::airlib::YawMode(0, tf::getYaw(target_point.pose.orientation) * 180 / M_PI));
 }
 
 // =============== Main function =================

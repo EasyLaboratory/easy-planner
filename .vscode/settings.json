@@ -78,7 +78,10 @@
     "numericaldiff": "cpp",
     "csignal": "cpp",
     "geometry": "cpp",
-    "regex": "cpp"
+    "regex": "cpp",
+    "forward_list": "cpp",
+    "slist": "cpp",
+    "future": "cpp"
   },
   "python.analysis.extraPaths": [
     "/home/ji/ros_ws/tracking_car/devel/lib/python3/dist-packages",

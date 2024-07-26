@@ -3,11 +3,15 @@
 #include <quadrotor_msgs/PositionCommand.h>
 #include <ros/ros.h>
 #include <std_msgs/Empty.h>
+#include <tf/transform_broadcaster.h>
+#include <tf/transform_datatypes.h>
+#include <trajectory_msgs/TrajectoryPoint.h>
 #include <visualization_msgs/Marker.h>
 
 #include <traj_opt/poly_traj_utils.hpp>
 
 ros::Publisher pos_cmd_pub_;
+ros::Publisher airsim_pos_cmd_pub_;
 ros::Time heartbeat_time_;
 bool receive_traj_ = false;
 bool flight_start_ = false;
@@ -38,6 +42,26 @@ void publish_cmd(int traj_id,
   cmd.yaw = y;
   cmd.yaw_dot = yd;
   pos_cmd_pub_.publish(cmd);
+
+  trajectory_msgs::TrajectoryPoint point;
+  point.pose.position.x = p(0);
+  point.pose.position.y = p(1);
+  point.pose.position.z = -p(2);
+
+  point.velocity.linear.x = v(0);
+  point.velocity.linear.y = v(1);
+  point.velocity.linear.z = v(2);
+  double yaw = y;
+
+  // Convert yaw angle to quaternion
+  tf::Quaternion q;
+  q.setRPY(0, 0, yaw);
+  point.pose.orientation.x = q.x();
+  point.pose.orientation.y = q.y();
+  point.pose.orientation.z = q.z();
+  point.pose.orientation.w = q.w();
+
+  airsim_pos_cmd_pub_.publish(cmd);
   last_p_ = p;
 }
 
@@ -139,15 +163,18 @@ void cmdCallback(const ros::TimerEvent &e) {
 int main(int argc, char **argv) {
   ros::init(argc, argv, "traj_server");
   ros::NodeHandle nh("~");
+  // 这个句柄是用来发送给airsim的。
+  ros::NodeHandle n;
 
   ros::Subscriber poly_traj_sub = nh.subscribe("trajectory", 10, polyTrajCallback);
   ros::Subscriber heartbeat_sub = nh.subscribe("heartbeat", 10, heartbeatCallback);
 
   // 实际的轨迹点是从这儿发出去的。
   pos_cmd_pub_ = nh.advertise<quadrotor_msgs::PositionCommand>("position_cmd", 50);
+  airsim_pos_cmd_pub_ = n.advertise<trajectory_msgs::TrajectoryPoint>("/command/trajectory", 50);
 
   // 定时去收位置请求。
-  ros::Timer cmd_timer = nh.createTimer(ros::Duration(0.01), cmdCallback);
+  ros::Timer cmd_timer = nh.createTimer(ros::Duration(0.05), cmdCallback);
 
   ros::Duration(1.0).sleep();
 
