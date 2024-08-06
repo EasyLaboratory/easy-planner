@@ -13,7 +13,7 @@ gnome-terminal --tab --title="rviz" -- bash -c "source devel/setup.bash; chmod +
 sleep 3
 
 # 打开第二个标签页并执行第三个指令
-gnome-terminal --tab --title="fake_target" -- bash -c "source devel/setup.bash; roslaunch planning airsim_fake_car_target.launch; exec bash"
+gnome-terminal --tab --title="fake_target" -- bash -c "source devel/setup.bash; roslaunch planning fake_car_target.launch; exec bash"
 sleep 3
 
 # 打开第三个标签页并执行第二个指令
