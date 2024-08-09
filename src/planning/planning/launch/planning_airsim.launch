@@ -43,6 +43,7 @@
   </node>
   <node pkg="planning" name="traj_server" type="traj_server" output="screen">
     <remap from="~position_cmd" to="position_cmd_airsim"/>
+    <remap from="~/command/trajectory" to="/command/trajectory"/>
     <remap from="~trajectory" to="trajectory"/>
     <remap from="~heartbeat" to="heartbeat"/>
     <param name="time_forward" value="1.0" type="double"/>

@@ -1047,7 +1047,7 @@ class Nodelet : public nodelet::Nodelet {
     // odom_sub_ = nh.subscribe<nav_msgs::Odometry>("odom", 10,
     // &Nodelet::odom_callback, this, ros::TransportHints().tcpNoDelay());
     odom_sub_ = nh.subscribe<nav_msgs::Odometry>(
-        "/airsim_node/drone_1/odom_local_ned", 10,
+        "/airsim_node/drone_1/odom_local_enu", 10,
         &Nodelet::airsim_odom_callback, this,
         ros::TransportHints().tcpNoDelay());
     target_sub_ = nh.subscribe<nav_msgs::Odometry>(

@@ -158,6 +158,7 @@ void polyTrajCallback(const quadrotor_msgs::PolyTrajConstPtr &msgPtr) {
 
 void cmdCallback(const ros::TimerEvent &e) {
   if (!receive_traj_) {
+    std::cout << "we dont receive_traj_" << std::endl;
     return;
   }
   ros::Time time_now = ros::Time::now();
@@ -193,7 +194,7 @@ int main(int argc, char **argv) {
       nh.advertise<quadrotor_msgs::PositionCommand>("position_cmd", 50);
   // 这个是我的加的给airsim的
   airsim_pos_cmd_pub_ =
-      n.advertise<mavros_msgs::PositionTarget>("command/trajectory", 50);
+      n.advertise<mavros_msgs::PositionTarget>("/command/trajectory", 50);
 
   // 定时去收位置请求。
   ros::Timer cmd_timer = nh.createTimer(ros::Duration(0.05), cmdCallback);
