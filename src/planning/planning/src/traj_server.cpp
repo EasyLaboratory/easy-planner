@@ -5,7 +5,7 @@
 #include <std_msgs/Empty.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
-#include <trajectory_msgs/TrajectoryPoint.h>
+// #include <trajectory_msgs/TrajectoryPoint.h>
 #include <visualization_msgs/Marker.h>
 
 #include <traj_opt/poly_traj_utils.hpp>
@@ -19,15 +19,14 @@ quadrotor_msgs::PolyTraj trajMsg_, trajMsg_last_;
 Eigen::Vector3d last_p_;
 double last_yaw_ = 0;
 
-void publish_cmd(int traj_id,
-                 const Eigen::Vector3d &p,
-                 const Eigen::Vector3d &v,
-                 const Eigen::Vector3d &a,
-                 double y, double yd) {
+void publish_cmd(int traj_id, const Eigen::Vector3d &p,
+                 const Eigen::Vector3d &v, const Eigen::Vector3d &a, double y,
+                 double yd) {
   quadrotor_msgs::PositionCommand cmd;
   cmd.header.stamp = ros::Time::now();
   cmd.header.frame_id = "world";
-  cmd.trajectory_flag = quadrotor_msgs::PositionCommand::TRAJECTORY_STATUS_READY;
+  cmd.trajectory_flag =
+      quadrotor_msgs::PositionCommand::TRAJECTORY_STATUS_READY;
   cmd.trajectory_id = traj_id;
 
   cmd.position.x = p(0);
@@ -43,25 +42,25 @@ void publish_cmd(int traj_id,
   cmd.yaw_dot = yd;
   pos_cmd_pub_.publish(cmd);
 
-  trajectory_msgs::TrajectoryPoint point;
-  point.pose.position.x = p(0);
-  point.pose.position.y = p(1);
-  point.pose.position.z = -p(2);
+  // trajectory_msgs::TrajectoryPoint point;
+  // point.pose.position.x = p(0);
+  // point.pose.position.y = p(1);
+  // point.pose.position.z = -p(2);
 
-  point.velocity.linear.x = v(0);
-  point.velocity.linear.y = v(1);
-  point.velocity.linear.z = v(2);
-  double yaw = y;
+  // point.velocity.linear.x = v(0);
+  // point.velocity.linear.y = v(1);
+  // point.velocity.linear.z = v(2);
+  // double yaw = y;
 
-  // Convert yaw angle to quaternion
-  tf::Quaternion q;
-  q.setRPY(0, 0, yaw);
-  point.pose.orientation.x = q.x();
-  point.pose.orientation.y = q.y();
-  point.pose.orientation.z = q.z();
-  point.pose.orientation.w = q.w();
+  // // Convert yaw angle to quaternion
+  // tf::Quaternion q;
+  // q.setRPY(0, 0, yaw);
+  // point.pose.orientation.x = q.x();
+  // point.pose.orientation.y = q.y();
+  // point.pose.orientation.z = q.z();
+  // point.pose.orientation.w = q.w();
 
-  airsim_pos_cmd_pub_.publish(cmd);
+  // airsim_pos_cmd_pub_.publish(cmd);
   last_p_ = p;
 }
 
@@ -84,7 +83,8 @@ bool exe_traj(const quadrotor_msgs::PolyTraj &trajMsg) {
       ROS_ERROR("[traj_server] Only support trajectory order equals 5 now!");
       return false;
     }
-    if (trajMsg.duration.size() * (trajMsg.order + 1) != trajMsg.coef_x.size()) {
+    if (trajMsg.duration.size() * (trajMsg.order + 1) !=
+        trajMsg.coef_x.size()) {
       ROS_ERROR("[traj_server] WRONG trajectory parameters!");
       return false;
     }
@@ -94,12 +94,15 @@ bool exe_traj(const quadrotor_msgs::PolyTraj &trajMsg) {
     std::vector<CoefficientMat> cMats(piece_nums);
     for (int i = 0; i < piece_nums; ++i) {
       int i6 = i * 6;
-      cMats[i].row(0) << trajMsg.coef_x[i6 + 0], trajMsg.coef_x[i6 + 1], trajMsg.coef_x[i6 + 2],
-          trajMsg.coef_x[i6 + 3], trajMsg.coef_x[i6 + 4], trajMsg.coef_x[i6 + 5];
-      cMats[i].row(1) << trajMsg.coef_y[i6 + 0], trajMsg.coef_y[i6 + 1], trajMsg.coef_y[i6 + 2],
-          trajMsg.coef_y[i6 + 3], trajMsg.coef_y[i6 + 4], trajMsg.coef_y[i6 + 5];
-      cMats[i].row(2) << trajMsg.coef_z[i6 + 0], trajMsg.coef_z[i6 + 1], trajMsg.coef_z[i6 + 2],
-          trajMsg.coef_z[i6 + 3], trajMsg.coef_z[i6 + 4], trajMsg.coef_z[i6 + 5];
+      cMats[i].row(0) << trajMsg.coef_x[i6 + 0], trajMsg.coef_x[i6 + 1],
+          trajMsg.coef_x[i6 + 2], trajMsg.coef_x[i6 + 3],
+          trajMsg.coef_x[i6 + 4], trajMsg.coef_x[i6 + 5];
+      cMats[i].row(1) << trajMsg.coef_y[i6 + 0], trajMsg.coef_y[i6 + 1],
+          trajMsg.coef_y[i6 + 2], trajMsg.coef_y[i6 + 3],
+          trajMsg.coef_y[i6 + 4], trajMsg.coef_y[i6 + 5];
+      cMats[i].row(2) << trajMsg.coef_z[i6 + 0], trajMsg.coef_z[i6 + 1],
+          trajMsg.coef_z[i6 + 2], trajMsg.coef_z[i6 + 3],
+          trajMsg.coef_z[i6 + 4], trajMsg.coef_z[i6 + 5];
 
       dura[i] = trajMsg.duration[i];
     }
@@ -147,8 +150,10 @@ void cmdCallback(const ros::TimerEvent &e) {
   }
   ros::Time time_now = ros::Time::now();
   if ((time_now - heartbeat_time_).toSec() > 0.5) {
-    ROS_ERROR_ONCE("[traj_server] Lost heartbeat from the planner, is he dead?");
-    publish_cmd(trajMsg_.traj_id, last_p_, Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(), 0, 0);  // TODO yaw
+    ROS_ERROR_ONCE(
+        "[traj_server] Lost heartbeat from the planner, is he dead?");
+    publish_cmd(trajMsg_.traj_id, last_p_, Eigen::Vector3d::Zero(),
+                Eigen::Vector3d::Zero(), 0, 0);  // TODO yaw
     return;
   }
   if (exe_traj(trajMsg_)) {
@@ -166,12 +171,17 @@ int main(int argc, char **argv) {
   // 这个句柄是用来发送给airsim的。
   ros::NodeHandle n;
 
-  ros::Subscriber poly_traj_sub = nh.subscribe("trajectory", 10, polyTrajCallback);
-  ros::Subscriber heartbeat_sub = nh.subscribe("heartbeat", 10, heartbeatCallback);
+  ros::Subscriber poly_traj_sub =
+      nh.subscribe("trajectory", 10, polyTrajCallback);
+  ros::Subscriber heartbeat_sub =
+      nh.subscribe("heartbeat", 10, heartbeatCallback);
 
   // 实际的轨迹点是从这儿发出去的。
-  pos_cmd_pub_ = nh.advertise<quadrotor_msgs::PositionCommand>("position_cmd", 50);
-  airsim_pos_cmd_pub_ = n.advertise<trajectory_msgs::TrajectoryPoint>("/command/trajectory", 50);
+  pos_cmd_pub_ =
+      nh.advertise<quadrotor_msgs::PositionCommand>("position_cmd", 50);
+  // airsim_pos_cmd_pub_ =
+  //     n.advertise<trajectory_msgs::TrajectoryPoint>("/command/trajectory",
+  //     50);
 
   // 定时去收位置请求。
   ros::Timer cmd_timer = nh.createTimer(ros::Duration(0.05), cmdCallback);

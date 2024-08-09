@@ -15,7 +15,6 @@
   <depend>mapping</depend>
   <depend>traj_opt</depend>
   <depend>decomp_ros_utils</depend>
-  <depend>trajectory_msgs</depend>
 
   <export>
     <nodelet plugin="${prefix}/nodelet_plugin.xml"/>

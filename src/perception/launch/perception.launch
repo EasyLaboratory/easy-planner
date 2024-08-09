@@ -1,8 +1,0 @@
-<launch>
-    <!-- 启动perception节点 -->
-    <arg name="venv" value="/home/lenovo/myws/easy-planner/src/perception/myenv/bin/python3"/>
-    <!-- <node name="perception_node" pkg="perception" type="perception.py" output="screen" launch-prefix = "$(arg venv)" >
-    </node> -->
-    <node name="perception_node" pkg="perception" type="perception_all_in_one.py" output="screen" launch-prefix = "$(arg venv)" >
-    </node>
-</launch>
