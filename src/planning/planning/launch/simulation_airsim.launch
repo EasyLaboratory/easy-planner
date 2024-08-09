@@ -15,6 +15,7 @@
       <remap from="~yolo" to="/target/odom_airsim"/>
       <!-- 这是原来的 -->
     <!-- <remap from="~yolo" to="/target/odom"/> -->
+    <!-- 往出去发的 -->
       <remap from="~odom" to="odom"/>
       <remap from="~target_odom" to="/target_ekf_odom"/>
     </node>

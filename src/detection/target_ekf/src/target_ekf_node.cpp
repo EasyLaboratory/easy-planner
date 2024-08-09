@@ -1,16 +1,17 @@
-#include <ros/ros.h>
-#include <Eigen/Geometry>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/time_synchronizer.h>
 #include <nav_msgs/Odometry.h>
 #include <object_detection_msgs/BoundingBoxes.h>
+#include <ros/ros.h>
 
-typedef message_filters::sync_policies::ApproximateTime<object_detection_msgs::BoundingBoxes, nav_msgs::Odometry>
+#include <Eigen/Geometry>
+
+typedef message_filters::sync_policies::ApproximateTime<
+    object_detection_msgs::BoundingBoxes, nav_msgs::Odometry>
     YoloOdomSyncPolicy;
-typedef message_filters::Synchronizer<YoloOdomSyncPolicy>
-    YoloOdomSynchronizer;
+typedef message_filters::Synchronizer<YoloOdomSyncPolicy> YoloOdomSynchronizer;
 ros::Publisher target_odom_pub_, yolo_odom_pub_;
 Eigen::Matrix3d cam2body_R_;
 Eigen::Vector3d cam2body_p_;
@@ -65,7 +66,8 @@ struct Ekf {
     Sigma.setZero();
   }
   inline bool checkValid(const Eigen::Vector3d& z) const {
-    Eigen::MatrixXd K_tmp = Sigma * C.transpose() * (C * Sigma * C.transpose() + Rt).inverse();
+    Eigen::MatrixXd K_tmp =
+        Sigma * C.transpose() * (C * Sigma * C.transpose() + Rt).inverse();
     Eigen::VectorXd x_tmp = x + K_tmp * (z - C * x);
     const double vmax = 4;
     if (x_tmp.tail(3).norm() > vmax) {
@@ -79,12 +81,8 @@ struct Ekf {
     x = x + K * (z - C * x);
     Sigma = Sigma - K * C * Sigma;
   }
-  inline const Eigen::Vector3d pos() const {
-    return x.head(3);
-  }
-  inline const Eigen::Vector3d vel() const {
-    return x.tail(3);
-  }
+  inline const Eigen::Vector3d pos() const { return x.head(3); }
+  inline const Eigen::Vector3d vel() const { return x.tail(3); }
 };
 
 std::shared_ptr<Ekf> ekfPtr_;
@@ -111,7 +109,9 @@ void predict_state_callback(const ros::TimerEvent& event) {
   target_odom_pub_.publish(target_odom);
 }
 
-void update_state_callback(const object_detection_msgs::BoundingBoxesConstPtr &bboxes_msg, const nav_msgs::OdometryConstPtr &odom_msg) {
+void update_state_callback(
+    const object_detection_msgs::BoundingBoxesConstPtr& bboxes_msg,
+    const nav_msgs::OdometryConstPtr& odom_msg) {
   // std::cout << "yolo stamp: " << bboxes_msg->header.stamp << std::endl;
   // std::cout << "odom stamp: " << odom_msg->header.stamp << std::endl;
   Eigen::Vector3d odom_p;
@@ -179,7 +179,7 @@ void update_state_callback(const object_detection_msgs::BoundingBoxesConstPtr &b
   last_update_stamp_ = ros::Time::now();
 }
 
-void odom_callback(const nav_msgs::OdometryConstPtr &odom_msg) {
+void odom_callback(const nav_msgs::OdometryConstPtr& odom_msg) {
   // std::cout << "real real real real " << odom_msg->header.stamp << std::endl;
 }
 
@@ -190,10 +190,14 @@ int main(int argc, char** argv) {
 
   std::vector<double> tmp;
   if (nh.param<std::vector<double>>("cam2body_R", tmp, std::vector<double>())) {
-    cam2body_R_ = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(tmp.data(), 3, 3);
+    cam2body_R_ =
+        Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(
+            tmp.data(), 3, 3);
   }
   if (nh.param<std::vector<double>>("cam2body_p", tmp, std::vector<double>())) {
-    cam2body_p_ = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(tmp.data(), 3, 1);
+    cam2body_p_ =
+        Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(
+            tmp.data(), 3, 1);
   }
   nh.getParam("cam_fx", fx_);
   nh.getParam("cam_fy", fy_);
@@ -205,19 +209,23 @@ int main(int argc, char** argv) {
   message_filters::Subscriber<nav_msgs::Odometry> odom_sub_;
   std::shared_ptr<YoloOdomSynchronizer> yolo_odom_sync_Ptr_;
   ros::Timer ekf_predict_timer_;
-  ros::Subscriber single_odom_sub = nh.subscribe("odom", 100, &odom_callback, ros::TransportHints().tcpNoDelay());
+  ros::Subscriber single_odom_sub = nh.subscribe(
+      "odom", 100, &odom_callback, ros::TransportHints().tcpNoDelay());
   target_odom_pub_ = nh.advertise<nav_msgs::Odometry>("target_odom", 1);
   yolo_odom_pub_ = nh.advertise<nav_msgs::Odometry>("yolo_odom", 1);
 
   int ekf_rate = 20;
   nh.getParam("ekf_rate", ekf_rate);
-  ekfPtr_ = std::make_shared<Ekf>(1.0/ekf_rate);
+  ekfPtr_ = std::make_shared<Ekf>(1.0 / ekf_rate);
 
   yolo_sub_.subscribe(nh, "yolo", 1, ros::TransportHints().tcpNoDelay());
   odom_sub_.subscribe(nh, "odom", 100, ros::TransportHints().tcpNoDelay());
-  yolo_odom_sync_Ptr_ = std::make_shared<YoloOdomSynchronizer>(YoloOdomSyncPolicy(200), yolo_sub_, odom_sub_);
-  yolo_odom_sync_Ptr_->registerCallback(boost::bind(&update_state_callback, _1, _2));
-  ekf_predict_timer_ = nh.createTimer(ros::Duration(1.0 / ekf_rate), &predict_state_callback);
+  yolo_odom_sync_Ptr_ = std::make_shared<YoloOdomSynchronizer>(
+      YoloOdomSyncPolicy(200), yolo_sub_, odom_sub_);
+  yolo_odom_sync_Ptr_->registerCallback(
+      boost::bind(&update_state_callback, _1, _2));
+  ekf_predict_timer_ =
+      nh.createTimer(ros::Duration(1.0 / ekf_rate), &predict_state_callback);
   ros::spin();
   return 0;
 }

@@ -1,7 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-//include ros dep.
+// include ros dep.
 #include <dynamic_reconfigure/server.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -20,13 +20,13 @@
 
 #include "tf/tf.h"
 #include "tf/transform_datatypes.h"
-//include pcl dep
+// include pcl dep
 #include <pcl/io/pcd_io.h>
 #include <pcl/io/ply_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
-//include opencv and eigen
+// include opencv and eigen
 #include <cv_bridge/cv_bridge.h>
 
 #include <Eigen/Eigen>
@@ -35,7 +35,7 @@
 
 #include "opencv2/highgui/highgui.hpp"
 
-//#include <cloud_banchmark/cloud_banchmarkConfig.h>
+// #include <cloud_banchmark/cloud_banchmarkConfig.h>
 #include "depth_render.cuh"
 #include "quadrotor_msgs/PositionCommand.h"
 using namespace cv;
@@ -45,7 +45,7 @@ using namespace Eigen;
 int *depth_hostptr;
 cv::Mat depth_mat;
 
-//camera param
+// camera param
 int width, height;
 double fx, fy, cx, cy;
 
@@ -102,7 +102,7 @@ void rcvOdometryCallbck(const nav_msgs::Odometry &odom) {
   Pose_receive(2, 3) = request_position(2);
 
   Matrix4d body_pose = Pose_receive;
-  //convert to cam pose
+  // convert to cam pose
   cam2world = body_pose * cam02body;
   cam2world_quat = cam2world.block<3, 3>(0, 0);
 
@@ -114,7 +114,7 @@ void rcvOdometryCallbck(const nav_msgs::Odometry &odom) {
 }
 
 void pubCameraPose(const ros::TimerEvent &event) {
-  //cout<<"pub cam pose"
+  // cout<<"pub cam pose"
   geometry_msgs::PoseStamped camera_pose;
   camera_pose.header = _odom.header;
   camera_pose.header.frame_id = "world";
@@ -129,7 +129,7 @@ void pubCameraPose(const ros::TimerEvent &event) {
 }
 
 void renderSensedPoints(const ros::TimerEvent &event) {
-  //if(! has_global_map || ! has_odom) return;
+  // if(! has_global_map || ! has_odom) return;
   if (!has_global_map && !has_local_map) return;
 
   if (!has_odom) return;
@@ -138,15 +138,15 @@ void renderSensedPoints(const ros::TimerEvent &event) {
 }
 
 vector<float> cloud_data;
-void rcvGlobalPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map) {
-  if (has_global_map)
-    return;
+void rcvGlobalPointCloudCallBack(
+    const sensor_msgs::PointCloud2 &pointcloud_map) {
+  if (has_global_map) return;
 
   ROS_WARN("Global Pointcloud received..");
-  //load global map
+  // load global map
   pcl::PointCloud<pcl::PointXYZ> cloudIn;
   pcl::PointXYZ pt_in;
-  //transform map to point cloud format
+  // transform map to point cloud format
   pcl::fromROSMsg(pointcloud_map, cloudIn);
   for (int i = 0; i < int(cloudIn.points.size()); i++) {
     pt_in = cloudIn.points[i];
@@ -155,33 +155,34 @@ void rcvGlobalPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map)
     cloud_data.push_back(pt_in.z);
   }
   printf("global map has points: %d.\n", (int)cloud_data.size() / 3);
-  //pass cloud_data to depth render
+  // pass cloud_data to depth render
   depthrender.set_data(cloud_data);
   depth_hostptr = (int *)malloc(width * height * sizeof(int));
 
   has_global_map = true;
-  ROS_ERROR("GLOBAL!!!!");
+  // ROS_ERROR("GLOBAL!!!!");
 }
 
-void rcvLocalPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map) {
-  //ROS_WARN("Local Pointcloud received..");
-  //load local map
+void rcvLocalPointCloudCallBack(
+    const sensor_msgs::PointCloud2 &pointcloud_map) {
+  // ROS_WARN("Local Pointcloud received..");
+  // load local map
   pcl::PointCloud<pcl::PointXYZ> cloudIn;
   pcl::PointXYZ pt_in;
-  //transform map to point cloud format
+  // transform map to point cloud format
   pcl::fromROSMsg(pointcloud_map, cloudIn);
 
   if (cloudIn.points.size() == 0) return;
   for (int i = 0; i < int(cloudIn.points.size()); i++) {
     pt_in = cloudIn.points[i];
     Eigen::Vector3d pose_pt(pt_in.x, pt_in.y, pt_in.z);
-    //pose_pt = gridIndex2coord(coord2gridIndex(pose_pt));
+    // pose_pt = gridIndex2coord(coord2gridIndex(pose_pt));
     cloud_data.push_back(pose_pt(0));
     cloud_data.push_back(pose_pt(1));
     cloud_data.push_back(pose_pt(2));
   }
-  //printf("local map has points: %d.\n", (int)cloud_data.size() / 3 );
-  //pass cloud_data to depth render
+  // printf("local map has points: %d.\n", (int)cloud_data.size() / 3 );
+  // pass cloud_data to depth render
   depthrender.set_data(cloud_data);
   depth_hostptr = (int *)malloc(width * height * sizeof(int));
 
@@ -189,7 +190,7 @@ void rcvLocalPointCloudCallBack(const sensor_msgs::PointCloud2 &pointcloud_map) 
 }
 
 void render_pcl_world() {
-  //for debug purpose
+  // for debug purpose
   pcl::PointCloud<pcl::PointXYZ> localMap;
   pcl::PointXYZ pt_in;
 
@@ -201,8 +202,7 @@ void render_pcl_world() {
     for (int v = 0; v < height; v++) {
       float depth = depth_mat.at<float>(v, u);
 
-      if (depth == 0.0)
-        continue;
+      if (depth == 0.0) continue;
 
       pose_in_camera(0) = (u - cx) * depth / fx;
       pose_in_camera(1) = (v - cy) * depth / fy;
@@ -211,7 +211,8 @@ void render_pcl_world() {
 
       pose_in_world = cam2world * pose_in_camera;
 
-      if ((pose_in_world.segment(0, 3) - last_pose_world).norm() > sensing_horizon)
+      if ((pose_in_world.segment(0, 3) - last_pose_world).norm() >
+          sensing_horizon)
         continue;
 
       pose_pt = pose_in_world.head(3);
@@ -241,11 +242,10 @@ void render_currentpose() {
   double pose[4 * 4];
 
   for (int i = 0; i < 4; i++)
-    for (int j = 0; j < 4; j++)
-      pose[j + 4 * i] = cam_pose(i, j);
+    for (int j = 0; j < 4; j++) pose[j + 4 * i] = cam_pose(i, j);
 
   depthrender.render_pose(pose, depth_hostptr);
-  //depthrender.render_pose(cam_pose, depth_hostptr);
+  // depthrender.render_pose(cam_pose, depth_hostptr);
 
   depth_mat = cv::Mat::zeros(height, width, CV_32FC1);
   double min = 0.5;
@@ -257,8 +257,8 @@ void render_currentpose() {
       max = depth > max ? depth : max;
       depth_mat.at<float>(i, j) = depth;
     }
-  //ROS_INFO("render cost %lf ms.", (ros::Time::now().toSec() - this_time) * 1000.0f);
-  //printf("max_depth %lf.\n", max);
+  // ROS_INFO("render cost %lf ms.", (ros::Time::now().toSec() - this_time) *
+  // 1000.0f); printf("max_depth %lf.\n", max);
 
   cv_bridge::CvImage out_msg;
   out_msg.header.stamp = last_odom_stamp;
@@ -278,7 +278,7 @@ void render_currentpose() {
   cv_image_colored.encoding = sensor_msgs::image_encodings::BGR8;
   cv_image_colored.image = falseColorsMap;
   pub_color.publish(cv_image_colored.toImageMsg());
-  //cv::imshow("depth_image", adjMap);
+  // cv::imshow("depth_image", adjMap);
 }
 
 int main(int argc, char **argv) {
@@ -297,24 +297,23 @@ int main(int argc, char **argv) {
 
   depthrender.set_para(fx, fy, cx, cy, width, height);
 
-  // cam02body <<  0.0148655429818, -0.999880929698, 0.00414029679422, -0.0216401454975,
-  //               0.999557249008, 0.0149672133247, 0.025715529948, -0.064676986768,
-  //               -0.0257744366974, 0.00375618835797, 0.999660727178, 0.00981073058949,
-  //               0.0, 0.0, 0.0, 1.0;
+  // cam02body <<  0.0148655429818, -0.999880929698, 0.00414029679422,
+  // -0.0216401454975,
+  //               0.999557249008, 0.0149672133247, 0.025715529948,
+  //               -0.064676986768, -0.0257744366974, 0.00375618835797,
+  //               0.999660727178, 0.00981073058949, 0.0, 0.0, 0.0, 1.0;
 
-  cam02body << 0.0, 0.0, 1.0, 0.0,
-      -1.0, 0.0, 0.0, 0.0,
-      0.0, -1.0, 0.0, 0.0,
+  cam02body << 0.0, 0.0, 1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0,
       0.0, 0.0, 0.0, 1.0;
 
-  //init cam2world transformation
+  // init cam2world transformation
   cam2world = Matrix4d::Identity();
-  //subscribe point cloud
+  // subscribe point cloud
   global_map_sub = nh.subscribe("global_map", 1, rcvGlobalPointCloudCallBack);
   local_map_sub = nh.subscribe("local_map", 1, rcvLocalPointCloudCallBack);
   odom_sub = nh.subscribe("odometry", 50, rcvOdometryCallbck);
 
-  //publisher depth image and color image
+  // publisher depth image and color image
   pub_depth = nh.advertise<sensor_msgs::Image>("depth", 1000);
   pub_color = nh.advertise<sensor_msgs::Image>("colordepth", 1000);
   pub_pose = nh.advertise<geometry_msgs::PoseStamped>("camera_pose", 1000);
@@ -323,9 +322,11 @@ int main(int argc, char **argv) {
   double sensing_duration = 1.0 / sensing_rate;
   double estimate_duration = 1.0 / estimation_rate;
 
-  local_sensing_timer = nh.createTimer(ros::Duration(sensing_duration), renderSensedPoints);
-  estimation_timer = nh.createTimer(ros::Duration(estimate_duration), pubCameraPose);
-  //cv::namedWindow("depth_image",1);
+  local_sensing_timer =
+      nh.createTimer(ros::Duration(sensing_duration), renderSensedPoints);
+  estimation_timer =
+      nh.createTimer(ros::Duration(estimate_duration), pubCameraPose);
+  // cv::namedWindow("depth_image",1);
 
   ros::Rate rate(100);
   bool status = ros::ok();

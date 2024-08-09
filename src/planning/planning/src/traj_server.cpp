@@ -1,3 +1,4 @@
+#include <mavros_msgs/PositionTarget.h>
 #include <nav_msgs/Odometry.h>
 #include <quadrotor_msgs/PolyTraj.h>
 #include <quadrotor_msgs/PositionCommand.h>
@@ -18,6 +19,13 @@ bool flight_start_ = false;
 quadrotor_msgs::PolyTraj trajMsg_, trajMsg_last_;
 Eigen::Vector3d last_p_;
 double last_yaw_ = 0;
+
+inline void normalizeYaw(double *yaw) {
+  *yaw = fmod(*yaw, 2 * M_PI);
+  if (*yaw < 0) {
+    *yaw += 2 * M_PI;
+  }
+}
 
 void publish_cmd(int traj_id, const Eigen::Vector3d &p,
                  const Eigen::Vector3d &v, const Eigen::Vector3d &a, double y,
@@ -42,25 +50,29 @@ void publish_cmd(int traj_id, const Eigen::Vector3d &p,
   cmd.yaw_dot = yd;
   pos_cmd_pub_.publish(cmd);
 
-  // trajectory_msgs::TrajectoryPoint point;
-  // point.pose.position.x = p(0);
-  // point.pose.position.y = p(1);
-  // point.pose.position.z = -p(2);
+  // 发送消息给airsim
+  mavros_msgs::PositionTarget point;
+  point.coordinate_frame = mavros_msgs::PositionTarget::FRAME_LOCAL_NED;
+  point.type_mask = mavros_msgs::PositionTarget::IGNORE_AFX |
+                    mavros_msgs::PositionTarget::IGNORE_AFY |
+                    mavros_msgs::PositionTarget::IGNORE_AFZ |
+                    mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
 
-  // point.velocity.linear.x = v(0);
-  // point.velocity.linear.y = v(1);
-  // point.velocity.linear.z = v(2);
-  // double yaw = y;
+  point.position.x = p(0);
+  point.position.y = p(1);
+  point.position.z = p(2);
 
-  // // Convert yaw angle to quaternion
-  // tf::Quaternion q;
-  // q.setRPY(0, 0, yaw);
-  // point.pose.orientation.x = q.x();
-  // point.pose.orientation.y = q.y();
-  // point.pose.orientation.z = q.z();
-  // point.pose.orientation.w = q.w();
+  point.velocity.x = v(0);
+  point.velocity.y = v(1);
+  point.velocity.z = v(2);  // Assume constant altitude
 
-  // airsim_pos_cmd_pub_.publish(cmd);
+  normalizeYaw(&y);  // Normalize yaw
+  point.yaw = y - M_PI / 2.0;
+  std::cout << "we pub point to airsim is "
+            << "point.position.x = " << point.position.x
+            << ", point.position.y = " << point.position.y
+            << ", point.position.z = " << point.position.z;
+  airsim_pos_cmd_pub_.publish(cmd);
   last_p_ = p;
 }
 
@@ -179,9 +191,9 @@ int main(int argc, char **argv) {
   // 实际的轨迹点是从这儿发出去的。
   pos_cmd_pub_ =
       nh.advertise<quadrotor_msgs::PositionCommand>("position_cmd", 50);
-  // airsim_pos_cmd_pub_ =
-  //     n.advertise<trajectory_msgs::TrajectoryPoint>("/command/trajectory",
-  //     50);
+  // 这个是我的加的给airsim的
+  airsim_pos_cmd_pub_ =
+      n.advertise<mavros_msgs::PositionTarget>("command/trajectory", 50);
 
   // 定时去收位置请求。
   ros::Timer cmd_timer = nh.createTimer(ros::Duration(0.05), cmdCallback);
