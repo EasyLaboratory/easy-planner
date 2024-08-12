@@ -2,20 +2,19 @@
     MIT License
     Copyright (c) 2021 Zhepei Wang (wangzhepei@live.com)
     Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
+    of this software and associated documentation files (the "Software"), to
+   deal in the Software without restriction, including without limitation the
+   rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+   sell copies of the Software, and to permit persons to whom the Software is
     furnished to do so, subject to the following conditions:
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
+    The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED
+   "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+   LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+   PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+   HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+   WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #pragma once
@@ -42,21 +41,13 @@ class Piece {
   Piece(double dur, const CoefficientMat &cMat)
       : duration(dur), coeffMat(cMat) {}
 
-  inline int getDim() const {
-    return 3;
-  }
+  inline int getDim() const { return 3; }
 
-  inline int getOrder() const {
-    return 5;
-  }
+  inline int getOrder() const { return 5; }
 
-  inline double getDuration() const {
-    return duration;
-  }
+  inline double getDuration() const { return duration; }
 
-  inline const CoefficientMat &getCoeffMat() const {
-    return coeffMat;
-  }
+  inline const CoefficientMat &getCoeffMat() const { return coeffMat; }
 
   inline VelCoefficientMat getVelCoeffMat() const {
     VelCoefficientMat velCoeffMat;
@@ -178,18 +169,18 @@ class Piece {
       while (fabs(RootFinder::polyVal(coeff.head(N - 1), r)) < DBL_EPSILON) {
         r = 0.5 * (r + 1.0);
       }
-      std::set<double> candidates = RootFinder::solvePolynomial(coeff.head(N - 1), l, r,
-                                                                FLT_EPSILON / duration);
+      std::set<double> candidates = RootFinder::solvePolynomial(
+          coeff.head(N - 1), l, r, FLT_EPSILON / duration);
       candidates.insert(0.0);
       candidates.insert(1.0);
       double maxVelRateSqr = -INFINITY;
       double tempNormSqr;
       for (std::set<double>::const_iterator it = candidates.begin();
-           it != candidates.end();
-           it++) {
+           it != candidates.end(); it++) {
         if (0.0 <= *it && 1.0 >= *it) {
           tempNormSqr = getVel((*it) * duration).squaredNorm();
-          maxVelRateSqr = maxVelRateSqr < tempNormSqr ? tempNormSqr : maxVelRateSqr;
+          maxVelRateSqr =
+              maxVelRateSqr < tempNormSqr ? tempNormSqr : maxVelRateSqr;
         }
       }
       return sqrt(maxVelRateSqr);
@@ -218,18 +209,18 @@ class Piece {
       while (fabs(RootFinder::polyVal(coeff.head(N - 1), r)) < DBL_EPSILON) {
         r = 0.5 * (r + 1.0);
       }
-      std::set<double> candidates = RootFinder::solvePolynomial(coeff.head(N - 1), l, r,
-                                                                FLT_EPSILON / duration);
+      std::set<double> candidates = RootFinder::solvePolynomial(
+          coeff.head(N - 1), l, r, FLT_EPSILON / duration);
       candidates.insert(0.0);
       candidates.insert(1.0);
       double maxAccRateSqr = -INFINITY;
       double tempNormSqr;
       for (std::set<double>::const_iterator it = candidates.begin();
-           it != candidates.end();
-           it++) {
+           it != candidates.end(); it++) {
         if (0.0 <= *it && 1.0 >= *it) {
           tempNormSqr = getAcc((*it) * duration).squaredNorm();
-          maxAccRateSqr = maxAccRateSqr < tempNormSqr ? tempNormSqr : maxAccRateSqr;
+          maxAccRateSqr =
+              maxAccRateSqr < tempNormSqr ? tempNormSqr : maxAccRateSqr;
         }
       }
       return sqrt(maxAccRateSqr);
@@ -270,8 +261,8 @@ class Piece {
   }
 
   // GaaiLam
-  inline double project_pt(const Eigen::Vector3d &pt,
-                           double &tt, Eigen::Vector3d &pro_pt) {
+  inline double project_pt(const Eigen::Vector3d &pt, double &tt,
+                           Eigen::Vector3d &pro_pt) {
     // 2*(p-p0)^T * \dot{p} = 0
     auto l_coeff = getCoeffMat();
     l_coeff.col(5) = l_coeff.col(5) - pt;
@@ -288,8 +279,7 @@ class Piece {
     while (fabs(RootFinder::polyVal(eq, r)) < DBL_EPSILON) {
       r = 0.5 * (duration + r);
     }
-    std::set<double> roots =
-        RootFinder::solvePolynomial(eq, l, r, 1e-6);
+    std::set<double> roots = RootFinder::solvePolynomial(eq, l, r, 1e-6);
     // std::cout << "# roots: " << roots.size() << std::endl;
     double min_dist = -1;
     for (const auto &root : roots) {
@@ -314,8 +304,8 @@ class Piece {
   }
 
   inline bool intersection_plane(const Eigen::Vector3d p,
-                                 const Eigen::Vector3d v,
-                                 double &tt, Eigen::Vector3d &pt) const {
+                                 const Eigen::Vector3d v, double &tt,
+                                 Eigen::Vector3d &pt) const {
     // (pt - p)^T * v = 0
     auto coeff = getCoeffMat();
     coeff.col(5) = coeff.col(5) - p;
@@ -328,8 +318,7 @@ class Piece {
     while (fabs(RootFinder::polyVal(eq, r)) < DBL_EPSILON) {
       r = 0.5 * (duration + r);
     }
-    std::set<double> roots =
-        RootFinder::solvePolynomial(eq, l, r, 1e-6);
+    std::set<double> roots = RootFinder::solvePolynomial(eq, l, r, 1e-6);
     for (const auto &root : roots) {
       tt = root;
       pt = getPos(root);
@@ -356,9 +345,7 @@ class Trajectory {
     }
   }
 
-  inline int getPieceNum() const {
-    return pieces.size();
-  }
+  inline int getPieceNum() const { return pieces.size(); }
 
   inline Eigen::VectorXd getDurations() const {
     int N = getPieceNum();
@@ -388,34 +375,22 @@ class Trajectory {
     return positions;
   }
 
-  inline const Piece &operator[](int i) const {
-    return pieces[i];
-  }
+  inline const Piece &operator[](int i) const { return pieces[i]; }
 
-  inline Piece &operator[](int i) {
-    return pieces[i];
-  }
+  inline Piece &operator[](int i) { return pieces[i]; }
 
   inline void clear(void) {
     pieces.clear();
     return;
   }
 
-  inline Pieces::const_iterator begin() const {
-    return pieces.begin();
-  }
+  inline Pieces::const_iterator begin() const { return pieces.begin(); }
 
-  inline Pieces::const_iterator end() const {
-    return pieces.end();
-  }
+  inline Pieces::const_iterator end() const { return pieces.end(); }
 
-  inline Pieces::iterator begin() {
-    return pieces.begin();
-  }
+  inline Pieces::iterator begin() { return pieces.begin(); }
 
-  inline Pieces::iterator end() {
-    return pieces.end();
-  }
+  inline Pieces::iterator end() { return pieces.end(); }
 
   inline void reserve(const int &n) {
     pieces.reserve(n);
@@ -427,8 +402,7 @@ class Trajectory {
     return;
   }
 
-  inline void emplace_back(const double &dur,
-                           const CoefficientMat &cMat) {
+  inline void emplace_back(const double &dur, const CoefficientMat &cMat) {
     pieces.emplace_back(dur, cMat);
     return;
   }
@@ -442,10 +416,7 @@ class Trajectory {
     int N = getPieceNum();
     int idx;
     double dur;
-    for (idx = 0;
-         idx < N &&
-         t > (dur = pieces[idx].getDuration());
-         idx++) {
+    for (idx = 0; idx < N && t > (dur = pieces[idx].getDuration()); idx++) {
       t -= dur;
     }
     if (idx == N) {
@@ -540,8 +511,8 @@ class Trajectory {
   }
 
   // GaaiLam
-  inline double project_pt(const Eigen::Vector3d &pt,
-                           int &ii, double &tt, Eigen::Vector3d &pro_pt) {
+  inline double project_pt(const Eigen::Vector3d &pt, int &ii, double &tt,
+                           Eigen::Vector3d &pro_pt) {
     double min_dist = -1;
     for (int i = 0; i < getPieceNum(); ++i) {
       auto piece = pieces[i];
@@ -559,8 +530,8 @@ class Trajectory {
     return min_dist;
   }
   inline bool intersection_plane(const Eigen::Vector3d p,
-                                 const Eigen::Vector3d v,
-                                 int &ii, double &tt, Eigen::Vector3d &pt) {
+                                 const Eigen::Vector3d v, int &ii, double &tt,
+                                 Eigen::Vector3d &pt) {
     for (int i = 0; i < getPieceNum(); ++i) {
       const auto &piece = pieces[i];
       if (piece.intersection_plane(p, v, tt, pt)) {

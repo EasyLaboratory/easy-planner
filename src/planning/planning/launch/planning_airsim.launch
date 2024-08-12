@@ -31,8 +31,8 @@
     <param name="rhosVisibility" value="$(arg rhosVisibility_)"/>
     <param name="theta_clearance" value="0.8"/>
     <param name="clearance_d" value="0.2"/>
-    <param name="tolerance_d" value="0.3"/>
-    <param name="tracking_dist" value="2.5"/>
+    <param name="tolerance_d" value="1.0"/>
+    <param name="tracking_dist" value="5.0"/>
     <param name="tracking_dur" value="3.0"/>
     <param name="tracking_dt" value="0.2"/>
     <param name="debug" value="false"/>

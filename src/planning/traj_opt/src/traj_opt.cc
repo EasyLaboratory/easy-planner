@@ -16,7 +16,8 @@ static double expC2(double t) {
 static double logC2(double T) {
   return T > 1.0 ? (sqrt(2.0 * T - 1.0) - 1.0) : (1.0 - sqrt(2.0 / T - 1.0));
 }
-static void forwardT(const Eigen::Ref<const Eigen::VectorXd>& t, const double& sT, Eigen::Ref<Eigen::VectorXd> vecT) {
+static void forwardT(const Eigen::Ref<const Eigen::VectorXd>& t,
+                     const double& sT, Eigen::Ref<Eigen::VectorXd> vecT) {
   int M = t.size();
   for (int i = 0; i < M; ++i) {
     vecT(i) = expC2(t(i));
@@ -27,7 +28,8 @@ static void forwardT(const Eigen::Ref<const Eigen::VectorXd>& t, const double& s
   vecT *= sT;
   return;
 }
-static void backwardT(const Eigen::Ref<const Eigen::VectorXd>& vecT, Eigen::Ref<Eigen::VectorXd> t) {
+static void backwardT(const Eigen::Ref<const Eigen::VectorXd>& vecT,
+                      Eigen::Ref<Eigen::VectorXd> t) {
   int M = t.size();
   t = vecT.head(M) / vecT(M);
   for (int i = 0; i < M; ++i) {
@@ -61,7 +63,8 @@ static void addLayerTGrad(const Eigen::Ref<const Eigen::VectorXd>& t,
   }
   denSqrt = expTauSum + 1.0;
   gradt = (gFree.array() - gTail) * dExpTau.array() / denSqrt -
-          (gFreeDotExpTau - gTail * expTauSum) * dExpTau.array() / (denSqrt * denSqrt);
+          (gFreeDotExpTau - gTail * expTauSum) * dExpTau.array() /
+              (denSqrt * denSqrt);
 }
 
 static void forwardP(const Eigen::Ref<const Eigen::VectorXd>& p,
@@ -73,15 +76,13 @@ static void forwardP(const Eigen::Ref<const Eigen::VectorXd>& p,
   for (int i = 0; i < M; ++i) {
     k = cfgPolyVs[i].cols() - 1;
     q = 2.0 / (1.0 + p.segment(j, k).squaredNorm()) * p.segment(j, k);
-    inP.col(i) = cfgPolyVs[i].rightCols(k) * q.cwiseProduct(q) +
-                 cfgPolyVs[i].col(0);
+    inP.col(i) =
+        cfgPolyVs[i].rightCols(k) * q.cwiseProduct(q) + cfgPolyVs[i].col(0);
     j += k;
   }
   return;
 }
-static double objectiveNLS(void* ptrPOBs,
-                           const double* x,
-                           double* grad,
+static double objectiveNLS(void* ptrPOBs, const double* x, double* grad,
                            const int n) {
   const Eigen::MatrixXd& pobs = *(Eigen::MatrixXd*)ptrPOBs;
   Eigen::Map<const Eigen::VectorXd> p(x, n);
@@ -92,15 +93,14 @@ static double objectiveNLS(void* ptrPOBs,
   double qnsqrp1sqr = qnsqrp1 * qnsqrp1;
   Eigen::VectorXd r = 2.0 / qnsqrp1 * p;
 
-  Eigen::Vector3d delta = pobs.rightCols(n) * r.cwiseProduct(r) +
-                          pobs.col(1) - pobs.col(0);
+  Eigen::Vector3d delta =
+      pobs.rightCols(n) * r.cwiseProduct(r) + pobs.col(1) - pobs.col(0);
   double cost = delta.squaredNorm();
   Eigen::Vector3d gradR3 = 2 * delta;
 
   Eigen::VectorXd gdr = pobs.rightCols(n).transpose() * gradR3;
   gdr = gdr.array() * r.array() * 2.0;
-  gradp = gdr * 2.0 / qnsqrp1 -
-          p * 4.0 * gdr.dot(p) / qnsqrp1sqr;
+  gradp = gdr * 2.0 / qnsqrp1 - p * 4.0 * gdr.dot(p) / qnsqrp1sqr;
 
   return cost;
 }
@@ -124,14 +124,8 @@ static void backwardP(const Eigen::Ref<const Eigen::MatrixXd>& inP,
     p.segment(j, k).setConstant(1.0 / (sqrt(k + 1.0) + 1.0));
     pobs.resize(3, k + 2);
     pobs << inP.col(i), cfgPolyVs[i];
-    lbfgs::lbfgs_optimize(k,
-                          p.data() + j,
-                          &minSqrD,
-                          &objectiveNLS,
-                          nullptr,
-                          nullptr,
-                          &pobs,
-                          &nls_params);
+    lbfgs::lbfgs_optimize(k, p.data() + j, &minSqrD, &objectiveNLS, nullptr,
+                          nullptr, &pobs, &nls_params);
     j += k;
   }
   return;
@@ -155,8 +149,8 @@ static void addLayerPGrad(const Eigen::Ref<const Eigen::VectorXd>& p,
     gdr = cfgPolyVs[i].rightCols(k).transpose() * gradInPs.col(i);
     gdr = gdr.array() * r.array() * 2.0;
 
-    grad.segment(j, k) = gdr * 2.0 / qnsqrp1 -
-                         q * 4.0 * gdr.dot(q) / qnsqrp1sqr;
+    grad.segment(j, k) =
+        gdr * 2.0 / qnsqrp1 - q * 4.0 * gdr.dot(q) / qnsqrp1sqr;
     j += k;
   }
   return;
@@ -164,9 +158,7 @@ static void addLayerPGrad(const Eigen::Ref<const Eigen::VectorXd>& p,
 // !SECTION variables transformation and gradient transmission
 
 // SECTION object function
-static inline double objectiveFunc(void* ptrObj,
-                                   const double* x,
-                                   double* grad,
+static inline double objectiveFunc(void* ptrObj, const double* x, double* grad,
                                    const int n) {
   TrajOpt& obj = *(TrajOpt*)ptrObj;
 
@@ -199,15 +191,9 @@ static inline double objectiveFunc(void* ptrObj,
 }
 // !SECTION object function
 
-static inline int earlyExit(void* ptrObj,
-                            const double* x,
-                            const double* grad,
-                            const double fx,
-                            const double xnorm,
-                            const double gnorm,
-                            const double step,
-                            int n,
-                            int k,
+static inline int earlyExit(void* ptrObj, const double* x, const double* grad,
+                            const double fx, const double xnorm,
+                            const double gnorm, const double step, int n, int k,
                             int ls) {
   return k > 1e3;
 }
@@ -291,7 +277,8 @@ void TrajOpt::setBoundConds(const Eigen::MatrixXd& iniState,
   Eigen::MatrixXd P(3, N_ - 1);
   for (int i = 0; i < N_ - 1; ++i) {
     int k = cfgVs_[i].cols() - 1;
-    P.col(i) = cfgVs_[i].rightCols(k).rowwise().sum() / (1.0 + k) + cfgVs_[i].col(0);
+    P.col(i) =
+        cfgVs_[i].rightCols(k).rowwise().sum() / (1.0 + k) + cfgVs_[i].col(0);
   }
   backwardP(P, cfgVs_, p_);
   jerkOpt_.reset(initS, finalS, N_);
@@ -313,8 +300,8 @@ int TrajOpt::optimize(const double& delta) {
   p = p_;
   double minObjective;
   auto ret = lbfgs::lbfgs_optimize(dim_t_ + dim_p_ + 1, x_, &minObjective,
-                                   &objectiveFunc, nullptr,
-                                   &earlyExit, this, &lbfgs_params);
+                                   &objectiveFunc, nullptr, &earlyExit, this,
+                                   &lbfgs_params);
   std::cout << "\033[32m"
             << "ret: " << ret << "\033[0m" << std::endl;
   t_ = t;
@@ -542,8 +529,8 @@ void TrajOpt::addTimeCost(double& cost) {
         }
       }
       // TODO occlusion
-      if (grad_cost_visibility(pos, target_p, tracking_visible_ps_[i], tracking_thetas_[i],
-                               grad_tmp, cost_tmp)) {
+      if (grad_cost_visibility(pos, target_p, tracking_visible_ps_[i],
+                               tracking_thetas_[i], grad_tmp, cost_tmp)) {
         gradViolaPc = beta0 * grad_tmp.transpose();
         cost += rho * step * cost_tmp;
         jerkOpt_.gdC.block<6, 3>(piece * 6, 0) += rho * step * gradViolaPc;
@@ -559,15 +546,15 @@ void TrajOpt::addTimeCost(double& cost) {
 
 bool TrajOpt::grad_cost_p_corridor(const Eigen::Vector3d& p,
                                    const Eigen::MatrixXd& hPoly,
-                                   Eigen::Vector3d& gradp,
-                                   double& costp) {
+                                   Eigen::Vector3d& gradp, double& costp) {
   // return false;
   bool ret = false;
   gradp.setZero();
   costp = 0;
   for (int i = 0; i < hPoly.cols(); ++i) {
     Eigen::Vector3d norm_vec = hPoly.col(i).head<3>();
-    double pen = norm_vec.dot(p - hPoly.col(i).tail<3>() + clearance_d_ * norm_vec);
+    double pen =
+        norm_vec.dot(p - hPoly.col(i).tail<3>() + clearance_d_ * norm_vec);
     if (pen > 0) {
       double pen2 = pen * pen;
       gradp += rhoP_ * 3 * pen2 * norm_vec;
@@ -619,8 +606,7 @@ static double penF2(const double& x, double& grad) {
 
 bool TrajOpt::grad_cost_p_tracking(const Eigen::Vector3d& p,
                                    const Eigen::Vector3d& target_p,
-                                   Eigen::Vector3d& gradp,
-                                   double& costp) {
+                                   Eigen::Vector3d& gradp, double& costp) {
   // return false;
   double upper = tracking_dist_ + tolerance_d_;
   double lower = tracking_dist_ - tolerance_d_;
@@ -666,8 +652,7 @@ bool TrajOpt::grad_cost_p_tracking(const Eigen::Vector3d& p,
 
 bool TrajOpt::grad_cost_p_landing(const Eigen::Vector3d& p,
                                   const Eigen::Vector3d& target_p,
-                                  Eigen::Vector3d& gradp,
-                                  double& costp) {
+                                  Eigen::Vector3d& gradp, double& costp) {
   Eigen::Vector3d dp = (p - target_p);
   double dr2 = dp.head(2).squaredNorm();
   double dz2 = dp.z() * dp.z();
@@ -700,21 +685,22 @@ bool TrajOpt::grad_cost_p_landing(const Eigen::Vector3d& p,
 bool TrajOpt::grad_cost_visibility(const Eigen::Vector3d& p,
                                    const Eigen::Vector3d& center,
                                    const Eigen::Vector3d& vis_p,
-                                   const double& theta,
-                                   Eigen::Vector3d& gradp,
+                                   const double& theta, Eigen::Vector3d& gradp,
                                    double& costp) {
   Eigen::Vector3d a = p - center;
   Eigen::Vector3d b = vis_p - center;
   double inner_product = a.dot(b);
   double norm_a = a.norm();
   double norm_b = b.norm();
-  double theta_less = theta - theta_clearance_ > 0 ? theta - theta_clearance_ : 0;
+  double theta_less =
+      theta - theta_clearance_ > 0 ? theta - theta_clearance_ : 0;
   double cosTheta = cos(theta_less);
   double pen = cosTheta - inner_product / norm_a / norm_b;
   if (pen > 0) {
     double grad = 0;
     costp = penF2(pen, grad);
-    gradp = grad * -(norm_a * b - inner_product / norm_a * a) / norm_a / norm_a / norm_b;
+    gradp = grad * -(norm_a * b - inner_product / norm_a * a) / norm_a /
+            norm_a / norm_b;
     // gradp = grad * (norm_b * cosTheta / norm_a * a - b);
     gradp *= rhosVisibility_;
     costp *= rhosVisibility_;
@@ -724,8 +710,7 @@ bool TrajOpt::grad_cost_visibility(const Eigen::Vector3d& p,
   }
 }
 
-bool TrajOpt::grad_cost_v(const Eigen::Vector3d& v,
-                          Eigen::Vector3d& gradv,
+bool TrajOpt::grad_cost_v(const Eigen::Vector3d& v, Eigen::Vector3d& gradv,
                           double& costv) {
   double vpen = v.squaredNorm() - vmax_ * vmax_;
   if (vpen > 0) {
@@ -736,8 +721,7 @@ bool TrajOpt::grad_cost_v(const Eigen::Vector3d& v,
   return false;
 }
 
-bool TrajOpt::grad_cost_a(const Eigen::Vector3d& a,
-                          Eigen::Vector3d& grada,
+bool TrajOpt::grad_cost_a(const Eigen::Vector3d& a, Eigen::Vector3d& grada,
                           double& costa) {
   double apen = a.squaredNorm() - amax_ * amax_;
   if (apen > 0) {

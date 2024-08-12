@@ -29,9 +29,7 @@ struct hash<Eigen::Matrix<Scalar, Rows, Cols>> {
 
 namespace env {
 
-enum State { OPEN,
-             CLOSE,
-             UNVISITED };
+enum State { OPEN, CLOSE, UNVISITED };
 struct Node {
   Eigen::Vector3i idx;
   bool valid = false;
@@ -75,8 +73,8 @@ class Env {
   }
 
  public:
-  Env(ros::NodeHandle& nh,
-      std::shared_ptr<mapping::OccGridMap>& mapPtr) : mapPtr_(mapPtr) {
+  Env(ros::NodeHandle& nh, std::shared_ptr<mapping::OccGridMap>& mapPtr)
+      : mapPtr_(mapPtr) {
     hPolyPub_ = nh.advertise<decomp_ros_msgs::PolyhedronArray>("polyhedra", 1);
     nh.getParam("tracking_dist", desired_dist_);
     nh.getParam("tolerance_d", tolerance_d_);
@@ -91,7 +89,8 @@ class Env {
     }
   }
 
-  bool inline checkRayValid(const Eigen::Vector3d& p0, const Eigen::Vector3d& p1, double max_dist) const {
+  bool inline checkRayValid(const Eigen::Vector3d& p0,
+                            const Eigen::Vector3d& p1, double max_dist) const {
     Eigen::Vector3d dp = p1 - p0;
     double dist = dp.norm();
     if (dist > max_dist) {
@@ -103,11 +102,13 @@ class Env {
     Eigen::Vector3i step = d_idx.array().sign().cast<int>();
     Eigen::Vector3d delta_t;
     for (int i = 0; i < 3; ++i) {
-      delta_t(i) = dp(i) == 0 ? std::numeric_limits<double>::max() : 1.0 / std::fabs(dp(i));
+      delta_t(i) = dp(i) == 0 ? std::numeric_limits<double>::max()
+                              : 1.0 / std::fabs(dp(i));
     }
     Eigen::Vector3d t_max;
     for (int i = 0; i < 3; ++i) {
-      t_max(i) = step(i) > 0 ? (idx0(i) + 1) - p0(i) / mapPtr_->resolution : p0(i) / mapPtr_->resolution - idx0(i);
+      t_max(i) = step(i) > 0 ? (idx0(i) + 1) - p0(i) / mapPtr_->resolution
+                             : p0(i) / mapPtr_->resolution - idx0(i);
     }
     t_max = t_max.cwiseProduct(delta_t);
     Eigen::Vector3i rayIdx = idx0;
@@ -125,7 +126,8 @@ class Env {
     }
     return true;
   }
-  bool inline checkRayValid(const Eigen::Vector3d& p0, const Eigen::Vector3d& p1) const {
+  bool inline checkRayValid(const Eigen::Vector3d& p0,
+                            const Eigen::Vector3d& p1) const {
     Eigen::Vector3d dp = p1 - p0;
     Eigen::Vector3i idx0 = mapPtr_->pos2idx(p0);
     Eigen::Vector3i idx1 = mapPtr_->pos2idx(p1);
@@ -133,11 +135,13 @@ class Env {
     Eigen::Vector3i step = d_idx.array().sign().cast<int>();
     Eigen::Vector3d delta_t;
     for (int i = 0; i < 3; ++i) {
-      delta_t(i) = dp(i) == 0 ? std::numeric_limits<double>::max() : 1.0 / std::fabs(dp(i));
+      delta_t(i) = dp(i) == 0 ? std::numeric_limits<double>::max()
+                              : 1.0 / std::fabs(dp(i));
     }
     Eigen::Vector3d t_max;
     for (int i = 0; i < 3; ++i) {
-      t_max(i) = step(i) > 0 ? (idx0(i) + 1) - p0(i) / mapPtr_->resolution : p0(i) / mapPtr_->resolution - idx0(i);
+      t_max(i) = step(i) > 0 ? (idx0(i) + 1) - p0(i) / mapPtr_->resolution
+                             : p0(i) / mapPtr_->resolution - idx0(i);
     }
     t_max = t_max.cwiseProduct(delta_t);
     Eigen::Vector3i rayIdx = idx0;
@@ -169,8 +173,7 @@ class Env {
     }
   }
 
-  void getPointCloudAroundLine(const vec_Vec3f& line,
-                               const int maxWidth,
+  void getPointCloudAroundLine(const vec_Vec3f& line, const int maxWidth,
                                vec_Vec3f& pc) {
     pc.clear();
     Eigen::Vector3d p0 = line.front();
@@ -182,9 +185,12 @@ class Env {
     Eigen::Vector3d delta_t;
     Eigen::Vector3i tmp_p, margin;
     margin.setConstant(maxWidth);
-    for (tmp_p.x() = idx0.x() - margin.x(); tmp_p.x() <= idx0.x() + margin.x(); ++tmp_p.x()) {
-      for (tmp_p.y() = idx0.y() - margin.y(); tmp_p.y() <= idx0.y() + margin.y(); ++tmp_p.y()) {
-        for (tmp_p.z() = idx0.z() - margin.z(); tmp_p.z() <= idx0.z() + margin.z(); ++tmp_p.z()) {
+    for (tmp_p.x() = idx0.x() - margin.x(); tmp_p.x() <= idx0.x() + margin.x();
+         ++tmp_p.x()) {
+      for (tmp_p.y() = idx0.y() - margin.y();
+           tmp_p.y() <= idx0.y() + margin.y(); ++tmp_p.y()) {
+        for (tmp_p.z() = idx0.z() - margin.z();
+             tmp_p.z() <= idx0.z() + margin.z(); ++tmp_p.z()) {
           if (mapPtr_->isOccupied(tmp_p)) {
             pc.push_back(mapPtr_->idx2pos(tmp_p));
           }
@@ -196,7 +202,8 @@ class Env {
     }
     Eigen::Vector3d t_max;
     for (int i = 0; i < 3; ++i) {
-      t_max(i) = step(i) > 0 ? std::ceil(p0(i)) - p0(i) : p0(i) - std::floor(p0(i));
+      t_max(i) =
+          step(i) > 0 ? std::ceil(p0(i)) - p0(i) : p0(i) - std::floor(p0(i));
     }
     t_max = t_max.cwiseProduct(delta_t);
     Eigen::Vector3i rayIdx = idx0;
@@ -213,9 +220,12 @@ class Env {
       margin(s_dim) = 0;
       Eigen::Vector3i center = rayIdx;
       center(s_dim) += maxWidth * step(s_dim);
-      for (tmp_p.x() = center.x() - margin.x(); tmp_p.x() <= center.x() + margin.x(); ++tmp_p.x()) {
-        for (tmp_p.y() = center.y() - margin.y(); tmp_p.y() <= center.y() + margin.y(); ++tmp_p.y()) {
-          for (tmp_p.z() = center.z() - margin.z(); tmp_p.z() <= center.z() + margin.z(); ++tmp_p.z()) {
+      for (tmp_p.x() = center.x() - margin.x();
+           tmp_p.x() <= center.x() + margin.x(); ++tmp_p.x()) {
+        for (tmp_p.y() = center.y() - margin.y();
+             tmp_p.y() <= center.y() + margin.y(); ++tmp_p.y()) {
+          for (tmp_p.z() = center.z() - margin.z();
+               tmp_p.z() <= center.z() + margin.z(); ++tmp_p.z()) {
             if (mapPtr_->isOccupied(tmp_p)) {
               pc.push_back(mapPtr_->idx2pos(tmp_p));
             }
@@ -252,11 +262,11 @@ class Env {
   }
 
   void generateOneCorridor(const std::pair<Eigen::Vector3d, Eigen::Vector3d>& l,
-                           const double bbox_width,
-                           Eigen::MatrixXd& hPoly) {
+                           const double bbox_width, Eigen::MatrixXd& hPoly) {
     vec_Vec3f obs_pc;
     EllipsoidDecomp3D decomp_util;
-    decomp_util.set_local_bbox(Eigen::Vector3d(bbox_width, bbox_width, bbox_width));
+    decomp_util.set_local_bbox(
+        Eigen::Vector3d(bbox_width, bbox_width, bbox_width));
     int maxWidth = bbox_width / mapPtr_->resolution;
 
     vec_Vec3f line;
@@ -276,14 +286,15 @@ class Env {
     return;
   }
 
-  void generateSFC(const std::vector<Eigen::Vector3d>& path,
-                   const double bbox_width,
-                   std::vector<Eigen::MatrixXd>& hPolys,
-                   std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>>& keyPts) {
+  void generateSFC(
+      const std::vector<Eigen::Vector3d>& path, const double bbox_width,
+      std::vector<Eigen::MatrixXd>& hPolys,
+      std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>>& keyPts) {
     assert(path.size() > 1);
     vec_Vec3f obs_pc;
     EllipsoidDecomp3D decomp_util;
-    decomp_util.set_local_bbox(Eigen::Vector3d(bbox_width, bbox_width, bbox_width));
+    decomp_util.set_local_bbox(
+        Eigen::Vector3d(bbox_width, bbox_width, bbox_width));
 
     int maxWidth = bbox_width / mapPtr_->resolution;
 
@@ -297,7 +308,8 @@ class Env {
     while (idx < path_len - 1) {
       int next_idx = idx;
       // looking forward -> get a farest next_idx
-      while (next_idx + 1 < path_len && checkRayValid(path[idx], path[next_idx + 1], bbox_width)) {
+      while (next_idx + 1 < path_len &&
+             checkRayValid(path[idx], path[next_idx + 1], bbox_width)) {
         next_idx++;
       }
       // generate corridor with idx and next_idx
@@ -324,8 +336,9 @@ class Env {
       vec_E<Hyperplane3D> current_hyperplanes = decompPolys[i].hyperplanes();
       current_poly.resize(6, current_hyperplanes.size());
       for (uint j = 0; j < current_hyperplanes.size(); j++) {
-        current_poly.col(j) << current_hyperplanes[j].n_, current_hyperplanes[j].p_;
-        //outside
+        current_poly.col(j) << current_hyperplanes[j].n_,
+            current_hyperplanes[j].p_;
+        // outside
       }
       hPolys.push_back(current_poly);
     }
@@ -363,7 +376,8 @@ class Env {
   }
 
   inline void visCorridor(const vec_E<Polyhedron3D>& polyhedra) {
-    decomp_ros_msgs::PolyhedronArray poly_msg = DecompROS::polyhedron_array_to_ros(polyhedra);
+    decomp_ros_msgs::PolyhedronArray poly_msg =
+        DecompROS::polyhedron_array_to_ros(polyhedra);
     poly_msg.header.frame_id = "world";
     poly_msg.header.stamp = ros::Time::now();
     hPolyPub_.publish(poly_msg);
@@ -388,7 +402,8 @@ class Env {
     Eigen::Vector3i step = d_idx.array().sign().cast<int>();
     Eigen::Vector3d delta_t;
     for (int i = 0; i < 3; ++i) {
-      delta_t(i) = d_idx(i) == 0 ? std::numeric_limits<double>::max() : 1.0 / std::fabs(d_idx(i));
+      delta_t(i) = d_idx(i) == 0 ? std::numeric_limits<double>::max()
+                                 : 1.0 / std::fabs(d_idx(i));
     }
     Eigen::Vector3d t_max(0.5, 0.5, 0.5);
     t_max = t_max.cwiseProduct(delta_t);
@@ -414,7 +429,8 @@ class Env {
                               std::vector<Eigen::Vector3i>& idx_path) {
     double stop_dist = desired_dist_ / mapPtr_->resolution;
     auto stopCondition = [&](const NodePtr& ptr) -> bool {
-      return ptr->h < tolerance_d_ / mapPtr_->resolution && rayValid(ptr->idx, end_idx);
+      return ptr->h < tolerance_d_ / mapPtr_->resolution &&
+             rayValid(ptr->idx, end_idx);
     };
     auto calulateHeuristic = [&](const NodePtr& ptr) {
       Eigen::Vector3i dp = end_idx - ptr->idx;
@@ -455,7 +471,8 @@ class Env {
 
     double t_cost = (ros::Time::now() - t_start_).toSec();
     if (t_cost > MAX_DURATION) {
-      std::cout << "[env] search costs more than " << MAX_DURATION << "s!" << std::endl;
+      std::cout << "[env] search costs more than " << MAX_DURATION << "s!"
+                << std::endl;
     }
     while (visited_nodes_.size() < MAX_MEMORY && t_cost <= MAX_DURATION) {
       for (const auto& neighbor : neighbors) {
@@ -646,10 +663,8 @@ class Env {
     return ret;
   }
 
-  inline void visible_pair(const Eigen::Vector3d& center,
-                           Eigen::Vector3d& seed,
-                           Eigen::Vector3d& visible_p,
-                           double& theta) {
+  inline void visible_pair(const Eigen::Vector3d& center, Eigen::Vector3d& seed,
+                           Eigen::Vector3d& visible_p, double& theta) {
     Eigen::Vector3d dp = seed - center;
     double theta0 = atan2(dp.y(), dp.x());
     double d_theta = mapPtr_->resolution / desired_dist_ / 2;
@@ -690,10 +705,10 @@ class Env {
     return;
   }
 
-  inline void generate_visible_regions(const std::vector<Eigen::Vector3d>& targets,
-                                       std::vector<Eigen::Vector3d>& seeds,
-                                       std::vector<Eigen::Vector3d>& visible_ps,
-                                       std::vector<double>& thetas) {
+  inline void generate_visible_regions(
+      const std::vector<Eigen::Vector3d>& targets,
+      std::vector<Eigen::Vector3d>& seeds,
+      std::vector<Eigen::Vector3d>& visible_ps, std::vector<double>& thetas) {
     assert(targets.size() == seeds.size());
     visible_ps.clear();
     thetas.clear();
@@ -808,7 +823,8 @@ class Env {
       }
     }
     if (ret) {
-      for (NodePtr ptr = curPtr->parent; ptr->parent != nullptr; ptr = ptr->parent) {
+      for (NodePtr ptr = curPtr->parent; ptr->parent != nullptr;
+           ptr = ptr->parent) {
         path.push_back(mapPtr_->idx2pos(ptr->idx));
       }
       std::reverse(path.begin(), path.end());
@@ -817,7 +833,8 @@ class Env {
     return ret;
   }
 
-  inline void pts2path(const std::vector<Eigen::Vector3d>& wayPts, std::vector<Eigen::Vector3d>& path) {
+  inline void pts2path(const std::vector<Eigen::Vector3d>& wayPts,
+                       std::vector<Eigen::Vector3d>& path) {
     path.clear();
     path.push_back(wayPts.front());
     int M = wayPts.size();

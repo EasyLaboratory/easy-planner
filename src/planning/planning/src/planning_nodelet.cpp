@@ -157,7 +157,7 @@ class Nodelet : public nodelet::Nodelet {
   }
 
   void gridmap_callback(const quadrotor_msgs::OccMap3dConstPtr& msgPtr) {
-    std::cout << "gridmap_callback " << std::endl;
+    // std::cout << "gridmap_callback " << std::endl;
     while (gridmap_lock_.test_and_set());
     map_msg_ = *msgPtr;
     map_received_ = true;
@@ -166,14 +166,14 @@ class Nodelet : public nodelet::Nodelet {
 
   // NOTE main callback 无人机用到的回调函数
   void plan_timer_callback(const ros::TimerEvent& event) {
-    std::cout << "plan_timer_callback" << std::endl;
+    // std::cout << "plan_timer_callback" << std::endl;
     heartbeat_pub_.publish(std_msgs::Empty());
-    std::cout << "odom_received_ = " << odom_received_ << std::endl;
-    std::cout << "map_received_ = " << map_received_ << std::endl;
+    // std::cout << "odom_received_ = " << odom_received_ << std::endl;
+    // std::cout << "map_received_ = " << map_received_ << std::endl;
     if (!odom_received_ || !map_received_) {
       return;
     }
-    std::cout << "after heartbeat_pub_." << std::endl;
+    // std::cout << "after heartbeat_pub_." << std::endl;
     // obtain state of odom
     while (odom_lock_.test_and_set());
     auto odom_msg = odom_msg_;
@@ -187,14 +187,14 @@ class Nodelet : public nodelet::Nodelet {
     Eigen::Quaterniond odom_q(
         odom_msg.pose.pose.orientation.w, odom_msg.pose.pose.orientation.x,
         odom_msg.pose.pose.orientation.y, odom_msg.pose.pose.orientation.z);
-    if (!triger_received_) {
-      return;
-    }
-    std::cout << "after  if (!triger_received_)" << std::endl;
+    // if (!triger_received_) {
+    //   return;
+    // }
+    // std::cout << "after  if (!triger_received_)" << std::endl;
     if (!target_received_) {
       return;
     }
-    std::cout << "after  if (!target_received_)" << std::endl;
+    // std::cout << "after  if (!target_received_)" << std::endl;
     // NOTE obtain state of target
     while (target_lock_.test_and_set());
     replanStateMsg_.target = target_msg_;
@@ -233,7 +233,8 @@ class Nodelet : public nodelet::Nodelet {
       wait_hover_ = false;
     } else {
       std::cout << "after  no in land_triger_received_" << std::endl;
-      target_p.z() += 1.0;
+      // todo 0812 定高飞行，记得修改
+      target_p.z() += 5.0;
       // NOTE determin whether to replan
       Eigen::Vector3d dp = target_p - odom_p;
       // std::cout << "dist : " << dp.norm() << std::endl;
@@ -474,6 +475,7 @@ class Nodelet : public nodelet::Nodelet {
     visPtr_->visualize_traj(traj, "traj");
   }
 
+  // 这个函数没有被用到
   void airsim_fake_timer_callback(const ros::TimerEvent& event) {
     heartbeat_pub_.publish(std_msgs::Empty());
     if (!odom_received_ || !map_received_) {

@@ -145,10 +145,17 @@ class Nodelet : public nodelet::Nodelet {
             if (drift_dis > depth_filter_tolerance_) {
               good_point = false;
             }
-          }
+          }  // 对地图进行膨胀处理
+          gridmap_.inflate(inflate_size_);
+          quadrotor_msgs::OccMap3d gridmap_msg;
+          gridmap_msg.header.frame_id = "world";
+          gridmap_msg.header.stamp = ros::Time::now();
+          gridmap_.to_msg(gridmap_msg);
+          gridmap_inflate_pub_.publish(gridmap_msg);
         }
         if (good_point) {
           obs_pts.push_back(p);
+          std::cout << "obs_pts.szie() = " << obs_pts.size() << std::endl;
         }
       }
     }
@@ -246,9 +253,6 @@ class Nodelet : public nodelet::Nodelet {
       gridmap_.setOcc(p);
     }
 
-    // 对地图进行膨胀处理
-    gridmap_.inflate(inflate_size_);
-
     ROS_WARN("[mapping] GLOBAL MAP RECEIVED!");
     map_recieved_ = true;
     return;
@@ -342,8 +346,8 @@ class Nodelet : public nodelet::Nodelet {
         nh.advertise<sensor_msgs::PointCloud2>("local_pointcloud", 1);
     pcl_pub_ = nh.advertise<sensor_msgs::PointCloud2>("mask_cloud", 10);
 
-    // std::cout << "--------------use_global_map_ = " << use_global_map_
-    //           << std::endl;
+    std::cout << "--------------use_global_map_ = " << use_global_map_
+              << std::endl;
     if (use_global_map_) {
       std::cout << "map_pc_sub_ = nh.subscribe<sensor_msgs::PointCloud2>"
                 << std::endl;
