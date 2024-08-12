@@ -18,7 +18,8 @@
 
 namespace mapping {
 
-typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, nav_msgs::Odometry>
+typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
+                                                        nav_msgs::Odometry>
     ImageOdomSyncPolicy;
 typedef message_filters::Synchronizer<ImageOdomSyncPolicy>
     ImageOdomSynchronizer;
@@ -76,6 +77,7 @@ class Nodelet : public nodelet::Nodelet {
   OccGridMap gridmap_;
   int inflate_size_;
 
+  // 这个函数的作用是从uav simulator中读取信息
   void depth_odom_callback(const sensor_msgs::ImageConstPtr& depth_msg,
                            const nav_msgs::OdometryConstPtr& odom_msg) {
     if (callback_lock_.test_and_set()) {
@@ -93,7 +95,9 @@ class Nodelet : public nodelet::Nodelet {
     Eigen::Quaterniond cam_q = body_q * Eigen::Quaterniond(cam2body_R_);
     cv_bridge::CvImagePtr depth_ptr = cv_bridge::toCvCopy(depth_msg);
     if (depth_msg->encoding == sensor_msgs::image_encodings::TYPE_32FC1) {
-      (depth_ptr->image).convertTo(depth_ptr->image, CV_16UC1, camConfig_.depth_scaling_factor);
+      (depth_ptr->image)
+          .convertTo(depth_ptr->image, CV_16UC1,
+                     camConfig_.depth_scaling_factor);
     }
     cv::Mat depth_img = depth_ptr->image;
 
@@ -107,15 +111,17 @@ class Nodelet : public nodelet::Nodelet {
     // TODO depth filter
 
     // t1 = ros::Time::now();
-    for (int i = depth_filter_margin_; i < nr - depth_filter_margin_; i += down_sample_factor_) {
-      for (int j = depth_filter_margin_; j < nc - depth_filter_margin_; j += down_sample_factor_) {
+    for (int i = depth_filter_margin_; i < nr - depth_filter_margin_;
+         i += down_sample_factor_) {
+      for (int j = depth_filter_margin_; j < nc - depth_filter_margin_;
+           j += down_sample_factor_) {
         // (x,y,z) in camera frame
-        double z = (depth_img.at<uint16_t>(i, j)) / camConfig_.depth_scaling_factor;
+        double z =
+            (depth_img.at<uint16_t>(i, j)) / camConfig_.depth_scaling_factor;
         if (depth_img.at<uint16_t>(i, j) == 0) {
           z = camConfig_.range + 0.5;
         }
-        if (std::isnan(z) || std::isinf(z))
-          continue;
+        if (std::isnan(z) || std::isinf(z)) continue;
         if (z < depth_filter_mindist_) {
           continue;
         }
@@ -128,10 +134,14 @@ class Nodelet : public nodelet::Nodelet {
           // NOTE depth filter:
           Eigen::Vector3d p_rev_proj =
               last_cam_q_.inverse().toRotationMatrix() * (p - last_cam_p_);
-          double vv = p_rev_proj.y() * camConfig_.fy / p_rev_proj.z() + camConfig_.cy;
-          double uu = p_rev_proj.x() * camConfig_.fx / p_rev_proj.z() + camConfig_.cx;
+          double vv =
+              p_rev_proj.y() * camConfig_.fy / p_rev_proj.z() + camConfig_.cy;
+          double uu =
+              p_rev_proj.x() * camConfig_.fx / p_rev_proj.z() + camConfig_.cx;
           if (vv >= 0 && vv < nr && uu >= 0 && uu < nc) {
-            double drift_dis = fabs(last_depth_.at<uint16_t>((int)vv, (int)uu) / camConfig_.depth_scaling_factor - p_rev_proj.z());
+            double drift_dis = fabs(last_depth_.at<uint16_t>((int)vv, (int)uu) /
+                                        camConfig_.depth_scaling_factor -
+                                    p_rev_proj.z());
             if (drift_dis > depth_filter_tolerance_) {
               good_point = false;
             }
@@ -150,8 +160,7 @@ class Nodelet : public nodelet::Nodelet {
 
     // NOTE use mask
     if (use_mask_) {  // mask target
-      while (target_lock_.test_and_set())
-        ;
+      while (target_lock_.test_and_set());
       Eigen::Vector3d ld = target_odom_;
       Eigen::Vector3d ru = target_odom_;
       ld.x() -= 0.5;
@@ -192,8 +201,7 @@ class Nodelet : public nodelet::Nodelet {
 
   // NOTE
   void target_odom_callback(const nav_msgs::OdometryConstPtr& msgPtr) {
-    while (target_lock_.test_and_set())
-      ;
+    while (target_lock_.test_and_set());
     target_odom_.x() = msgPtr->pose.pose.position.x;
     target_odom_.y() = msgPtr->pose.pose.position.y;
     target_odom_.z() = msgPtr->pose.pose.position.z;
@@ -250,7 +258,9 @@ class Nodelet : public nodelet::Nodelet {
     if (!map_recieved_) {
       return;
     }
-    // std::cout << "now we are here---global_map_timer_callback!!" << std::endl;
+    std::cout << "in global_map_timer_callback map_recieved_ is "
+              << map_recieved_ << std::endl;
+    std::cout << "now we are here---global_map_timer_callback!!" << std::endl;
     quadrotor_msgs::OccMap3d gridmap_msg;
     gridmap_.to_msg(gridmap_msg);
     gridmap_inflate_pub_.publish(gridmap_msg);
@@ -261,11 +271,17 @@ class Nodelet : public nodelet::Nodelet {
     // cam2body_R_ << 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 0.0, -1.0, 0.0;
     // cam2body_p_.setZero();
     std::vector<double> tmp;
-    if (nh.param<std::vector<double>>("cam2body_R", tmp, std::vector<double>())) {
-      cam2body_R_ = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(tmp.data(), 3, 3);
+    if (nh.param<std::vector<double>>("cam2body_R", tmp,
+                                      std::vector<double>())) {
+      cam2body_R_ =
+          Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(
+              tmp.data(), 3, 3);
     }
-    if (nh.param<std::vector<double>>("cam2body_p", tmp, std::vector<double>())) {
-      cam2body_p_ = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(tmp.data(), 3, 1);
+    if (nh.param<std::vector<double>>("cam2body_p", tmp,
+                                      std::vector<double>())) {
+      cam2body_p_ =
+          Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(
+              tmp.data(), 3, 1);
     }
     // std::cout << "R: \n" << cam2body_R_ << std::endl;
     // std::cout << "p: \n" << cam2body_p_ << std::endl;
@@ -282,7 +298,9 @@ class Nodelet : public nodelet::Nodelet {
       nh.getParam("inflate_size", inflate_size_);
       gridmap_.setup(res, Eigen::Vector3d(x, y, z), 10, true);
     } else {
+      // 这些需要明确下 TODO fxj
       // camera parameters
+      std::cout << "set camera parameters" << std::endl;
       nh.getParam("camera_rate", camConfig_.rate);
       nh.getParam("camera_range", camConfig_.range);
       nh.getParam("cam_width", camConfig_.width);
@@ -316,27 +334,37 @@ class Nodelet : public nodelet::Nodelet {
     }
     gridmap_.inflate_size = inflate_size_;
     // use mask parameter
-    nh.getParam("use_mask", use_mask_);
 
-    gridmap_inflate_pub_ = nh.advertise<quadrotor_msgs::OccMap3d>("gridmap_inflate", 1);
+    gridmap_inflate_pub_ =
+        nh.advertise<quadrotor_msgs::OccMap3d>("gridmap_inflate", 1);
 
-    local_pc_pub_ = nh.advertise<sensor_msgs::PointCloud2>("local_pointcloud", 1);
+    local_pc_pub_ =
+        nh.advertise<sensor_msgs::PointCloud2>("local_pointcloud", 1);
     pcl_pub_ = nh.advertise<sensor_msgs::PointCloud2>("mask_cloud", 10);
 
+    // std::cout << "--------------use_global_map_ = " << use_global_map_
+    //           << std::endl;
     if (use_global_map_) {
-      std::cout << "use_global_map_" << std::endl;
-      map_pc_sub_ = nh.subscribe<sensor_msgs::PointCloud2>("global_map", 1, &Nodelet::empty_map_call_back, this);
-      global_map_timer_ = nh.createTimer(ros::Duration(1.0), &Nodelet::global_map_timer_callback, this);
+      std::cout << "map_pc_sub_ = nh.subscribe<sensor_msgs::PointCloud2>"
+                << std::endl;
+      map_pc_sub_ = nh.subscribe<sensor_msgs::PointCloud2>(
+          "global_map", 1, &Nodelet::empty_map_call_back, this);
+      global_map_timer_ = nh.createTimer(
+          ros::Duration(1.0), &Nodelet::global_map_timer_callback, this);
     } else {
       std::cout << "else...+++++++++++++++++++" << std::endl;
       depth_sub_.subscribe(nh, "depth", 1);
       odom_sub_.subscribe(nh, "odom", 50);
-      depth_odom_sync_Ptr_ = std::make_shared<ImageOdomSynchronizer>(ImageOdomSyncPolicy(100), depth_sub_, odom_sub_);
-      depth_odom_sync_Ptr_->registerCallback(boost::bind(&Nodelet::depth_odom_callback, this, _1, _2));
+      depth_odom_sync_Ptr_ = std::make_shared<ImageOdomSynchronizer>(
+          ImageOdomSyncPolicy(100), depth_sub_, odom_sub_);
+      depth_odom_sync_Ptr_->registerCallback(
+          boost::bind(&Nodelet::depth_odom_callback, this, _1, _2));
     }
 
     if (use_mask_) {
-      target_odom_sub_ = nh.subscribe<nav_msgs::Odometry>("target", 1, &Nodelet::target_odom_callback, this, ros::TransportHints().tcpNoDelay());
+      target_odom_sub_ = nh.subscribe<nav_msgs::Odometry>(
+          "target", 1, &Nodelet::target_odom_callback, this,
+          ros::TransportHints().tcpNoDelay());
     }
   }
 

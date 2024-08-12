@@ -1,4 +1,8 @@
 <launch>
+  <node pkg="mockamap" type="mockamap_node" name="mockamap_node" output="screen">
+    <rosparam file="$(find uav_simulator)/config/mockamap.yaml"/>
+    <remap from="/mock_map" to="/global_map"/>
+  </node>
   <group ns="drone0">
     <include file="$(find mapping)/launch/mapping.launch"/>
     <node name="mapping_vis" pkg="mapping" type="mapping_vis_node">

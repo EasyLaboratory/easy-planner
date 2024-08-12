@@ -174,8 +174,7 @@ void pub_fov_visual(Eigen::Vector3d& p, Eigen::Quaterniond& q) {
 }
 
 void odom_callback(const nav_msgs::Odometry::ConstPtr& msg) {
-  if (msg->header.frame_id == string("null"))
-    return;
+  if (msg->header.frame_id == string("null")) return;
   colvec pose(6);
   colvec q(4);
   colvec vel(3);
@@ -184,7 +183,7 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr& msg) {
   pose(1) = msg->pose.pose.position.y;
   // pose(2) = msg->pose.pose.position.z;
   pose(2) = 0;
-  // q(0) = msg->pose.pose.orientation.w; 
+  // q(0) = msg->pose.pose.orientation.w;
   // q(1) = msg->pose.pose.orientation.x;
   // q(2) = msg->pose.pose.orientation.y;
   // q(3) = msg->pose.pose.orientation.z;
@@ -199,8 +198,11 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr& msg) {
   vel(2) = msg->twist.twist.linear.z;
 
   // NOTE fov
-  Eigen::Vector3d fov_p(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z);
-  Eigen::Quaterniond fov_q(msg->pose.pose.orientation.w, msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
+  Eigen::Vector3d fov_p(msg->pose.pose.position.x, msg->pose.pose.position.y,
+                        msg->pose.pose.position.z);
+  Eigen::Quaterniond fov_q(
+      msg->pose.pose.orientation.w, msg->pose.pose.orientation.x,
+      msg->pose.pose.orientation.y, msg->pose.pose.orientation.z);
   pub_fov_visual(fov_p, fov_q);
 
   if (origin && !isOriginSet) {
@@ -324,8 +326,7 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr& msg) {
   if (cov_pos) {
     mat P(6, 6);
     for (int j = 0; j < 6; j++)
-      for (int i = 0; i < 6; i++)
-        P(i, j) = msg->pose.covariance[i + j * 6];
+      for (int i = 0; i < 6; i++) P(i, j) = msg->pose.covariance[i + j * 6];
     colvec eigVal;
     mat eigVec;
     eig_sym(eigVal, eigVec, P.submat(0, 0, 2, 2));
@@ -367,8 +368,7 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr& msg) {
   if (cov_vel) {
     mat P(3, 3);
     for (int j = 0; j < 3; j++)
-      for (int i = 0; i < 3; i++)
-        P(i, j) = msg->twist.covariance[i + j * 6];
+      for (int i = 0; i < 3; i++) P(i, j) = msg->twist.covariance[i + j * 6];
     mat R = ypr_to_R(pose.rows(3, 5));
     P = R * P * trans(R);
     colvec eigVal;
@@ -508,16 +508,19 @@ void odom_callback(const nav_msgs::Odometry::ConstPtr& msg) {
     colvec q90 = R_to_quaternion(ypr_to_R(p90));
     transform90.setRotation(tf::Quaternion(q90(1), q90(2), q90(3), q90(0)));
 
-    broadcaster->sendTransform(tf::StampedTransform(transform, msg->header.stamp, string("world"), string("/base")));
-    broadcaster->sendTransform(tf::StampedTransform(transform45, msg->header.stamp, string("/base"), string("/laser")));
-    broadcaster->sendTransform(tf::StampedTransform(transform45, msg->header.stamp, string("/base"), string("/vision")));
-    broadcaster->sendTransform(tf::StampedTransform(transform90, msg->header.stamp, string("/base"), string("/height")));
+    broadcaster->sendTransform(tf::StampedTransform(
+        transform, msg->header.stamp, string("world"), string("/base")));
+    broadcaster->sendTransform(tf::StampedTransform(
+        transform45, msg->header.stamp, string("/base"), string("/laser")));
+    broadcaster->sendTransform(tf::StampedTransform(
+        transform45, msg->header.stamp, string("/base"), string("/vision")));
+    broadcaster->sendTransform(tf::StampedTransform(
+        transform90, msg->header.stamp, string("/base"), string("/height")));
   }
 }
 
 void cmd_callback(const quadrotor_msgs::PositionCommand cmd) {
-  if (cmd.header.frame_id == string("null"))
-    return;
+  if (cmd.header.frame_id == string("null")) return;
 
   colvec pose(6);
   pose(0) = cmd.position.x;
@@ -565,8 +568,10 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "odom_visualization");
   ros::NodeHandle n("~");
 
-  // n.param("mesh_resource", mesh_resource, std::string("package://odom_visualization/meshes/hummingbird.mesh"));
-  n.param("mesh_resource", mesh_resource, std::string("package://odom_visualization/meshes/f250.dae"));
+  // n.param("mesh_resource", mesh_resource,
+  // std::string("package://odom_visualization/meshes/hummingbird.mesh"));
+  n.param("mesh_resource", mesh_resource,
+          std::string("package://odom_visualization/meshes/f250.dae"));
 
   n.param("color/r", color_r, 1.0);
   n.param("color/g", color_g, 0.0);
@@ -589,7 +594,8 @@ int main(int argc, char** argv) {
   pathPub = n.advertise<nav_msgs::Path>("path", 100, true);
   velPub = n.advertise<visualization_msgs::Marker>("velocity", 100, true);
   covPub = n.advertise<visualization_msgs::Marker>("covariance", 100, true);
-  covVelPub = n.advertise<visualization_msgs::Marker>("covariance_velocity", 100, true);
+  covVelPub =
+      n.advertise<visualization_msgs::Marker>("covariance_velocity", 100, true);
   trajPub = n.advertise<visualization_msgs::Marker>("trajectory", 100, true);
   sensorPub = n.advertise<visualization_msgs::Marker>("sensor", 100, true);
   meshPub = n.advertise<visualization_msgs::Marker>("robot", 100, true);

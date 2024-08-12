@@ -68,11 +68,11 @@ void publish_cmd(int traj_id, const Eigen::Vector3d &p,
 
   normalizeYaw(&y);  // Normalize yaw
   point.yaw = y - M_PI / 2.0;
-  std::cout << "we pub point to airsim is "
+  std::cout << "we pub point to airsim is --- "
             << "point.position.x = " << point.position.x
             << ", point.position.y = " << point.position.y
             << ", point.position.z = " << point.position.z;
-  airsim_pos_cmd_pub_.publish(cmd);
+  airsim_pos_cmd_pub_.publish(point);
   last_p_ = p;
 }
 
@@ -149,6 +149,7 @@ void heartbeatCallback(const std_msgs::EmptyConstPtr &msg) {
 }
 
 void polyTrajCallback(const quadrotor_msgs::PolyTrajConstPtr &msgPtr) {
+  std::cout << "polyTrajCallback " << std::endl;
   trajMsg_ = *msgPtr;
   if (!receive_traj_) {
     trajMsg_last_ = trajMsg_;

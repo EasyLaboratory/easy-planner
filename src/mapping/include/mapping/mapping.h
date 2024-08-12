@@ -41,9 +41,7 @@ struct RingBuffer {
   inline const _Datatype& atId(const Eigen::Vector3i& id) const {
     return at(idx2add(id));
   }
-  inline _Datatype& atId(const Eigen::Vector3i& id) {
-    return at(idx2add(id));
-  }
+  inline _Datatype& atId(const Eigen::Vector3i& id) { return at(idx2add(id)); }
   inline _Datatype* atIdPtr(const Eigen::Vector3i& id) {
     return atPtr(idx2add(id));
   }
@@ -66,16 +64,16 @@ struct OccGridMap {
   int size_x, size_y, size_z;
 
  private:
-  RingBuffer<int8_t> infocc;  // -128 ~ 127  1 for occupied, 0 for known, -1 for free
-  RingBuffer<int8_t> vis;     // 1 for occupied, -1 for raycasted, 0 for free or unvisited
+  RingBuffer<int8_t>
+      infocc;  // -128 ~ 127  1 for occupied, 0 for known, -1 for free
+  RingBuffer<int8_t>
+      vis;  // 1 for occupied, -1 for raycasted, 0 for free or unvisited
   RingBuffer<int16_t> pro;
   RingBuffer<u_int16_t> occ;  // 0 ~ 65535  half: 32768
 
  public:
-  inline void setup(const double& res,
-                    const Eigen::Vector3d& map_size,
-                    const double& cam_range,
-                    bool use_global_map = false) {
+  inline void setup(const double& res, const Eigen::Vector3d& map_size,
+                    const double& cam_range, bool use_global_map = false) {
     resolution = res;
     size_x = exp2(int(log2(map_size.x() / res)));
     size_y = exp2(int(log2(map_size.y() / res)));
@@ -100,12 +98,8 @@ struct OccGridMap {
     pro.fillData(p_def);
     sensor_range = cam_range;
   }
-  inline void setupP(const int& _p_min,
-                     const int& _p_max,
-                     const int& _p_hit,
-                     const int& _p_mis,
-                     const int& _p_occ,
-                     const int& _p_def) {
+  inline void setupP(const int& _p_min, const int& _p_max, const int& _p_hit,
+                     const int& _p_mis, const int& _p_occ, const int& _p_def) {
     // NOTE logit(x) = log(x/(1-x))
     p_min = _p_min;  // 0.12 -> -199
     p_max = _p_max;  // 0.90 ->  220
@@ -130,9 +124,12 @@ struct OccGridMap {
     return isInMap(pos2idx(p));
   }
   inline const bool isInSmallMap(const Eigen::Vector3i& id) const {
-    return id.x() - offset_x >= inflate_size && id.x() - offset_x < size_x - inflate_size &&
-           id.y() - offset_y >= inflate_size && id.y() - offset_y < size_y - inflate_size &&
-           id.z() - offset_z >= inflate_size && id.z() - offset_z < size_z - inflate_size;
+    return id.x() - offset_x >= inflate_size &&
+           id.x() - offset_x < size_x - inflate_size &&
+           id.y() - offset_y >= inflate_size &&
+           id.y() - offset_y < size_y - inflate_size &&
+           id.z() - offset_z >= inflate_size &&
+           id.z() - offset_z < size_z - inflate_size;
   }
   inline const bool isInSmallMap(const Eigen::Vector3d& p) const {
     return isInSmallMap(pos2idx(p));
@@ -160,15 +157,12 @@ struct OccGridMap {
     infocc.setup(size_x, size_y, size_z);
     infocc.data = msg.data;
   }
-  inline void setOcc(const Eigen::Vector3d& p) {
-    infocc.atId(pos2idx(p)) = 1;
-  }
+  inline void setOcc(const Eigen::Vector3d& p) { infocc.atId(pos2idx(p)) = 1; }
 
  private:
   std::vector<Eigen::Vector3i> v0, v1;
   // return true if in range; id_filtered will be limited in range
-  inline bool filter(const Eigen::Vector3d& sensor_p,
-                     const Eigen::Vector3d& p,
+  inline bool filter(const Eigen::Vector3d& sensor_p, const Eigen::Vector3d& p,
                      Eigen::Vector3d& pt) const {
     Eigen::Vector3i id = pos2idx(p);
     Eigen::Vector3d dp = p - sensor_p;
@@ -185,9 +179,15 @@ struct OccGridMap {
       dp = pt - sensor_p;
       Eigen::Array3d v = dp.array().abs() / resolution;
       Eigen::Array3d d;
-      d.x() = v.x() <= size_x / 2 - 1 - inflate_size ? 0 : v.x() - size_x / 2 + 1 + inflate_size;
-      d.y() = v.y() <= size_y / 2 - 1 - inflate_size ? 0 : v.y() - size_y / 2 + 1 + inflate_size;
-      d.z() = v.z() <= size_z / 2 - 1 - inflate_size ? 0 : v.z() - size_z / 2 + 1 + inflate_size;
+      d.x() = v.x() <= size_x / 2 - 1 - inflate_size
+                  ? 0
+                  : v.x() - size_x / 2 + 1 + inflate_size;
+      d.y() = v.y() <= size_y / 2 - 1 - inflate_size
+                  ? 0
+                  : v.y() - size_y / 2 + 1 + inflate_size;
+      d.z() = v.z() <= size_z / 2 - 1 - inflate_size
+                  ? 0
+                  : v.z() - size_z / 2 + 1 + inflate_size;
       double t_max = 0;
       for (int i = 0; i < 3; ++i) {
         t_max = (d[i] > 0 && d[i] / v[i] > t_max) ? d[i] / v[i] : t_max;
@@ -199,9 +199,12 @@ struct OccGridMap {
   inline void free2occ(const Eigen::Vector3i& idx) {
     occ.atId(idx) += 32767;
     Eigen::Vector3i id;
-    for (id.x() = idx.x() - inflate_size; id.x() <= idx.x() + inflate_size; ++id.x())
-      for (id.y() = idx.y() - inflate_size; id.y() <= idx.y() + inflate_size; ++id.y())
-        for (id.z() = idx.z() - inflate_size; id.z() <= idx.z() + inflate_size; ++id.z()) {
+    for (id.x() = idx.x() - inflate_size; id.x() <= idx.x() + inflate_size;
+         ++id.x())
+      for (id.y() = idx.y() - inflate_size; id.y() <= idx.y() + inflate_size;
+           ++id.y())
+        for (id.z() = idx.z() - inflate_size; id.z() <= idx.z() + inflate_size;
+             ++id.z()) {
           occ.atId(id)++;
           infocc.atId(id) = 1;
         }
@@ -209,9 +212,12 @@ struct OccGridMap {
   inline void occ2free(const Eigen::Vector3i& idx) {
     occ.atId(idx) -= 32767;
     Eigen::Vector3i id;
-    for (id.x() = idx.x() - inflate_size; id.x() <= idx.x() + inflate_size; ++id.x())
-      for (id.y() = idx.y() - inflate_size; id.y() <= idx.y() + inflate_size; ++id.y())
-        for (id.z() = idx.z() - inflate_size; id.z() <= idx.z() + inflate_size; ++id.z()) {
+    for (id.x() = idx.x() - inflate_size; id.x() <= idx.x() + inflate_size;
+         ++id.x())
+      for (id.y() = idx.y() - inflate_size; id.y() <= idx.y() + inflate_size;
+           ++id.y())
+        for (id.z() = idx.z() - inflate_size; id.z() <= idx.z() + inflate_size;
+             ++id.z()) {
           occ.atId(id)--;
           infocc.atId(id) = occ.atId(id) > 0 ? 1 : -1;
         }

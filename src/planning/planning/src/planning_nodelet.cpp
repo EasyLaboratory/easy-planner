@@ -79,6 +79,7 @@ class Nodelet : public nodelet::Nodelet {
     traj_msg.start_time = stamp;
     traj_msg.traj_id = traj_id_++;
     traj_pub_.publish(traj_msg);
+    std::cout << "pub_hover_p pub_hover_p" << std::endl;
   }
   void pub_traj(const Trajectory& traj, const double& yaw,
                 const ros::Time& stamp) {
@@ -106,6 +107,7 @@ class Nodelet : public nodelet::Nodelet {
     // NOTE yaw
     traj_msg.yaw = yaw;
     traj_pub_.publish(traj_msg);
+    std::cout << "pub_traj pub_traj" << std::endl;
   }
 
   // 设置起点
@@ -155,6 +157,7 @@ class Nodelet : public nodelet::Nodelet {
   }
 
   void gridmap_callback(const quadrotor_msgs::OccMap3dConstPtr& msgPtr) {
+    std::cout << "gridmap_callback " << std::endl;
     while (gridmap_lock_.test_and_set());
     map_msg_ = *msgPtr;
     map_received_ = true;
@@ -163,10 +166,14 @@ class Nodelet : public nodelet::Nodelet {
 
   // NOTE main callback 无人机用到的回调函数
   void plan_timer_callback(const ros::TimerEvent& event) {
+    std::cout << "plan_timer_callback" << std::endl;
     heartbeat_pub_.publish(std_msgs::Empty());
+    std::cout << "odom_received_ = " << odom_received_ << std::endl;
+    std::cout << "map_received_ = " << map_received_ << std::endl;
     if (!odom_received_ || !map_received_) {
       return;
     }
+    std::cout << "after heartbeat_pub_." << std::endl;
     // obtain state of odom
     while (odom_lock_.test_and_set());
     auto odom_msg = odom_msg_;
@@ -183,9 +190,11 @@ class Nodelet : public nodelet::Nodelet {
     if (!triger_received_) {
       return;
     }
+    std::cout << "after  if (!triger_received_)" << std::endl;
     if (!target_received_) {
       return;
     }
+    std::cout << "after  if (!target_received_)" << std::endl;
     // NOTE obtain state of target
     while (target_lock_.test_and_set());
     replanStateMsg_.target = target_msg_;
@@ -206,7 +215,7 @@ class Nodelet : public nodelet::Nodelet {
     if (force_hover_ && odom_v.norm() > 0.1) {
       return;
     }
-
+    std::cout << "after  if (force_hover_ && odom_v.norm() > 0.1)" << std::endl;
     // NOTE just for landing on the car!
     if (land_triger_received_) {
       if (std::fabs((target_p - odom_p).norm() < 0.1 && odom_v.norm() < 0.1 &&
@@ -223,6 +232,7 @@ class Nodelet : public nodelet::Nodelet {
       target_p = target_p + target_q * land_p_;
       wait_hover_ = false;
     } else {
+      std::cout << "after  no in land_triger_received_" << std::endl;
       target_p.z() += 1.0;
       // NOTE determin whether to replan
       Eigen::Vector3d dp = target_p - odom_p;
