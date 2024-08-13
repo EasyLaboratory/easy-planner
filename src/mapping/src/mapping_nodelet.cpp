@@ -155,7 +155,7 @@ class Nodelet : public nodelet::Nodelet {
         }
         if (good_point) {
           obs_pts.push_back(p);
-          std::cout << "obs_pts.szie() = " << obs_pts.size() << std::endl;
+          // std::cout << "obs_pts.szie() = " << obs_pts.size() << std::endl;
         }
       }
     }
@@ -304,7 +304,6 @@ class Nodelet : public nodelet::Nodelet {
     } else {
       // 这些需要明确下 TODO fxj
       // camera parameters
-      std::cout << "set camera parameters" << std::endl;
       nh.getParam("camera_rate", camConfig_.rate);
       nh.getParam("camera_range", camConfig_.range);
       nh.getParam("cam_width", camConfig_.width);
@@ -335,6 +334,7 @@ class Nodelet : public nodelet::Nodelet {
       nh.getParam("p_occ", p_occ);
       nh.getParam("p_def", p_def);
       gridmap_.setupP(p_min, p_max, p_hit, p_mis, p_occ, p_def);
+      ROS_INFO("set camera parameters done!");
     }
     gridmap_.inflate_size = inflate_size_;
     // use mask parameter
@@ -345,18 +345,12 @@ class Nodelet : public nodelet::Nodelet {
     local_pc_pub_ =
         nh.advertise<sensor_msgs::PointCloud2>("local_pointcloud", 1);
     pcl_pub_ = nh.advertise<sensor_msgs::PointCloud2>("mask_cloud", 10);
-
-    std::cout << "--------------use_global_map_ = " << use_global_map_
-              << std::endl;
     if (use_global_map_) {
-      std::cout << "map_pc_sub_ = nh.subscribe<sensor_msgs::PointCloud2>"
-                << std::endl;
       map_pc_sub_ = nh.subscribe<sensor_msgs::PointCloud2>(
           "global_map", 1, &Nodelet::empty_map_call_back, this);
       global_map_timer_ = nh.createTimer(
           ros::Duration(1.0), &Nodelet::global_map_timer_callback, this);
     } else {
-      std::cout << "else...+++++++++++++++++++" << std::endl;
       depth_sub_.subscribe(nh, "depth", 1);
       odom_sub_.subscribe(nh, "odom", 50);
       depth_odom_sync_Ptr_ = std::make_shared<ImageOdomSynchronizer>(

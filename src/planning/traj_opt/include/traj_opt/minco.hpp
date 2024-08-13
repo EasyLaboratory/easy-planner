@@ -2,20 +2,19 @@
     MIT License
     Copyright (c) 2021 Zhepei Wang (wangzhepei@live.com)
     Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
+    of this software and associated documentation files (the "Software"), to
+   deal in the Software without restriction, including without limitation the
+   rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+   sell copies of the Software, and to permit persons to whom the Software is
     furnished to do so, subject to the following conditions:
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
+    The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED
+   "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+   LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+   PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+   HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+   WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #pragma once
@@ -182,8 +181,7 @@ class MinJerkOpt {
   ~MinJerkOpt() { A.destroy(); }
 
   inline void reset(const Eigen::Matrix3d &headState,
-                    const Eigen::Matrix3d &tailState,
-                    const int &pieceNum) {
+                    const Eigen::Matrix3d &tailState, const int &pieceNum) {
     N = pieceNum;
     headPVA = headState;
     tailPVA = tailState;
@@ -196,8 +194,7 @@ class MinJerkOpt {
     return;
   }
 
-  inline void generate(const Eigen::MatrixXd &inPs,
-                       const Eigen::VectorXd &ts) {
+  inline void generate(const Eigen::MatrixXd &inPs, const Eigen::VectorXd &ts) {
     T1 = ts;
     T2 = T1.cwiseProduct(T1);
     T3 = T2.cwiseProduct(T1);
@@ -316,20 +313,16 @@ class MinJerkOpt {
     Eigen::RowVector3d negVel, negAcc, negJer, negSnp, negCrk;
 
     for (int i = 0; i < N - 1; i++) {
-      negVel = -(b.row(i * 6 + 1) +
-                 2.0 * T1(i) * b.row(i * 6 + 2) +
-                 3.0 * T2(i) * b.row(i * 6 + 3) +
-                 4.0 * T3(i) * b.row(i * 6 + 4) +
-                 5.0 * T4(i) * b.row(i * 6 + 5));
-      negAcc = -(2.0 * b.row(i * 6 + 2) +
-                 6.0 * T1(i) * b.row(i * 6 + 3) +
-                 12.0 * T2(i) * b.row(i * 6 + 4) +
-                 20.0 * T3(i) * b.row(i * 6 + 5));
-      negJer = -(6.0 * b.row(i * 6 + 3) +
-                 24.0 * T1(i) * b.row(i * 6 + 4) +
+      negVel =
+          -(b.row(i * 6 + 1) + 2.0 * T1(i) * b.row(i * 6 + 2) +
+            3.0 * T2(i) * b.row(i * 6 + 3) + 4.0 * T3(i) * b.row(i * 6 + 4) +
+            5.0 * T4(i) * b.row(i * 6 + 5));
+      negAcc =
+          -(2.0 * b.row(i * 6 + 2) + 6.0 * T1(i) * b.row(i * 6 + 3) +
+            12.0 * T2(i) * b.row(i * 6 + 4) + 20.0 * T3(i) * b.row(i * 6 + 5));
+      negJer = -(6.0 * b.row(i * 6 + 3) + 24.0 * T1(i) * b.row(i * 6 + 4) +
                  60.0 * T2(i) * b.row(i * 6 + 5));
-      negSnp = -(24.0 * b.row(i * 6 + 4) +
-                 120.0 * T1(i) * b.row(i * 6 + 5));
+      negSnp = -(24.0 * b.row(i * 6 + 4) + 120.0 * T1(i) * b.row(i * 6 + 5));
       negCrk = -120.0 * b.row(i * 6 + 5);
 
       B1 << negSnp, negCrk, negVel, negVel, negAcc, negJer;
@@ -337,17 +330,14 @@ class MinJerkOpt {
       gdT(i) += B1.cwiseProduct(gdC.block<6, 3>(6 * i + 3, 0)).sum();
     }
 
-    negVel = -(b.row(6 * N - 5) +
-               2.0 * T1(N - 1) * b.row(6 * N - 4) +
+    negVel = -(b.row(6 * N - 5) + 2.0 * T1(N - 1) * b.row(6 * N - 4) +
                3.0 * T2(N - 1) * b.row(6 * N - 3) +
                4.0 * T3(N - 1) * b.row(6 * N - 2) +
                5.0 * T4(N - 1) * b.row(6 * N - 1));
-    negAcc = -(2.0 * b.row(6 * N - 4) +
-               6.0 * T1(N - 1) * b.row(6 * N - 3) +
+    negAcc = -(2.0 * b.row(6 * N - 4) + 6.0 * T1(N - 1) * b.row(6 * N - 3) +
                12.0 * T2(N - 1) * b.row(6 * N - 2) +
                20.0 * T3(N - 1) * b.row(6 * N - 1));
-    negJer = -(6.0 * b.row(6 * N - 3) +
-               24.0 * T1(N - 1) * b.row(6 * N - 2) +
+    negJer = -(6.0 * b.row(6 * N - 3) + 24.0 * T1(N - 1) * b.row(6 * N - 2) +
                60.0 * T2(N - 1) * b.row(6 * N - 1));
 
     B2 << negVel, negAcc, negJer;
@@ -374,7 +364,8 @@ class MinJerkOpt {
     Trajectory traj;
     traj.reserve(N);
     for (int i = 0; i < N; i++) {
-      traj.emplace_back(T1(i), b.block<6, 3>(6 * i, 0).transpose().rowwise().reverse());
+      traj.emplace_back(
+          T1(i), b.block<6, 3>(6 * i, 0).transpose().rowwise().reverse());
     }
     return traj;
   }

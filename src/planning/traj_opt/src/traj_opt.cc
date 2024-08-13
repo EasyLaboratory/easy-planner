@@ -13,9 +13,11 @@ static double expC2(double t) {
   return t > 0.0 ? ((0.5 * t + 1.0) * t + 1.0)
                  : 1.0 / ((0.5 * t - 1.0) * t + 1.0);
 }
+
 static double logC2(double T) {
   return T > 1.0 ? (sqrt(2.0 * T - 1.0) - 1.0) : (1.0 - sqrt(2.0 / T - 1.0));
 }
+
 static void forwardT(const Eigen::Ref<const Eigen::VectorXd>& t,
                      const double& sT, Eigen::Ref<Eigen::VectorXd> vecT) {
   int M = t.size();
@@ -28,6 +30,7 @@ static void forwardT(const Eigen::Ref<const Eigen::VectorXd>& t,
   vecT *= sT;
   return;
 }
+
 static void backwardT(const Eigen::Ref<const Eigen::VectorXd>& vecT,
                       Eigen::Ref<Eigen::VectorXd> t) {
   int M = t.size();
@@ -37,6 +40,7 @@ static void backwardT(const Eigen::Ref<const Eigen::VectorXd>& vecT,
   }
   return;
 }
+
 static void addLayerTGrad(const Eigen::Ref<const Eigen::VectorXd>& t,
                           const double& sT,
                           const Eigen::Ref<const Eigen::VectorXd>& gradT,
@@ -82,6 +86,7 @@ static void forwardP(const Eigen::Ref<const Eigen::VectorXd>& p,
   }
   return;
 }
+
 static double objectiveNLS(void* ptrPOBs, const double* x, double* grad,
                            const int n) {
   const Eigen::MatrixXd& pobs = *(Eigen::MatrixXd*)ptrPOBs;
@@ -130,6 +135,7 @@ static void backwardP(const Eigen::Ref<const Eigen::MatrixXd>& inP,
   }
   return;
 }
+
 static void addLayerPGrad(const Eigen::Ref<const Eigen::VectorXd>& p,
                           const std::vector<Eigen::MatrixXd>& cfgPolyVs,
                           const Eigen::Ref<const Eigen::MatrixXd>& gradInPs,
@@ -189,8 +195,8 @@ static inline double objectiveFunc(void* ptrObj, const double* x, double* grad,
 
   return cost;
 }
-// !SECTION object function
 
+// !SECTION object function
 static inline int earlyExit(void* ptrObj, const double* x, const double* grad,
                             const double fx, const double xnorm,
                             const double gnorm, const double step, int n, int k,
@@ -302,8 +308,8 @@ int TrajOpt::optimize(const double& delta) {
   auto ret = lbfgs::lbfgs_optimize(dim_t_ + dim_p_ + 1, x_, &minObjective,
                                    &objectiveFunc, nullptr, &earlyExit, this,
                                    &lbfgs_params);
-  std::cout << "\033[32m"
-            << "ret: " << ret << "\033[0m" << std::endl;
+  // std::cout << "\033[32m"
+  //           << "ret: " << ret << "\033[0m" << std::endl;
   t_ = t;
   p_ = p;
   return ret;
@@ -520,7 +526,9 @@ void TrajOpt::addTimeCost(double& cost) {
         }
       }
     } else {
+      ROS_ERROR("elsesssssssssssssss");
       if (grad_cost_p_tracking(pos, target_p, grad_tmp, cost_tmp)) {
+        ROS_ERROR("grad_cost_p_tracking");
         gradViolaPc = beta0 * grad_tmp.transpose();
         cost += rho * step * cost_tmp;
         jerkOpt_.gdC.block<6, 3>(piece * 6, 0) += rho * step * gradViolaPc;
@@ -531,6 +539,7 @@ void TrajOpt::addTimeCost(double& cost) {
       // TODO occlusion
       if (grad_cost_visibility(pos, target_p, tracking_visible_ps_[i],
                                tracking_thetas_[i], grad_tmp, cost_tmp)) {
+        ROS_ERROR("grad_cost_visibility");
         gradViolaPc = beta0 * grad_tmp.transpose();
         cost += rho * step * cost_tmp;
         jerkOpt_.gdC.block<6, 3>(piece * 6, 0) += rho * step * gradViolaPc;
@@ -582,6 +591,7 @@ bool TrajOpt::grad_cost_p_corridor(const Eigen::Vector3d& p,
 //     return 2 * x03 * x - x04;
 //   }
 // }
+// 专门为了描述论文中的函数而写的
 static double penF(const double& x, double& grad) {
   static double eps = 0.05;
   static double eps2 = eps * eps;
@@ -604,6 +614,7 @@ static double penF2(const double& x, double& grad) {
   return x * x2;
 }
 
+// 关于在圆环范围内的COST的导数值
 bool TrajOpt::grad_cost_p_tracking(const Eigen::Vector3d& p,
                                    const Eigen::Vector3d& target_p,
                                    Eigen::Vector3d& gradp, double& costp) {
@@ -650,6 +661,7 @@ bool TrajOpt::grad_cost_p_tracking(const Eigen::Vector3d& p,
   return ret;
 }
 
+// 降落的COST的导数值
 bool TrajOpt::grad_cost_p_landing(const Eigen::Vector3d& p,
                                   const Eigen::Vector3d& target_p,
                                   Eigen::Vector3d& gradp, double& costp) {

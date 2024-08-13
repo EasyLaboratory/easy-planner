@@ -77,17 +77,14 @@ void update_state_callback(const nav_msgs::OdometryConstPtr& target_msg,
   q.x() = target_msg->pose.pose.orientation.x;
   q.y() = target_msg->pose.pose.orientation.y;
   q.z() = target_msg->pose.pose.orientation.z;
-  std::cout << "we can see the target, it's position is " << "p.x() = " << p.x()
-            << ",  p.y() = " << p.y() << ",  p.z() = " << p.z() << std::endl;
+  ROS_INFO("through kalam target postion (x,y,z) = (%f,%f,%f)", p.x(), p.y(),
+           p.z());
 
   Eigen::Vector3d rpy = quaternion2euler(q);
 
   // NOTE check whether it's in FOV
   // check_fov_ = false 这个函数没有进来
   if (check_fov_) {
-    // std::cout <<
-    // "check_fov_check_fov_check_fov_check_fov_check_fov_check_fov_: " <<
-    // std::endl;
     Eigen::Vector3d p_in_body = cam_q.inverse() * (p - cam_p);
     if (p_in_body.z() < 0.1 || p_in_body.z() > 5.0) {
       return;
@@ -117,10 +114,7 @@ void update_state_callback(const nav_msgs::OdometryConstPtr& target_msg,
   last_update_stamp_ = ros::Time::now();
 }
 
-void odom_callback(const nav_msgs::OdometryConstPtr& odom_msg) {
-  // std::cout << "sim ism ism ism s is s w s " << odom_msg->header.stamp <<
-  // std::endl;
-}
+void odom_callback(const nav_msgs::OdometryConstPtr& odom_msg) {}
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "target_ekf");
@@ -147,7 +141,6 @@ int main(int argc, char** argv) {
   nh.getParam("cam_height", height_);
   nh.getParam("pitch_thr", pitch_thr_);
   nh.getParam("check_fov", check_fov_);
-  std::cout << "check_fov_=========" << check_fov_ << std::endl;
 
   message_filters::Subscriber<nav_msgs::Odometry> yolo_sub_;
   message_filters::Subscriber<nav_msgs::Odometry> odom_sub_;

@@ -35,8 +35,9 @@ struct Predict {
   NodePtr data[MAX_MEMORY];
   int stack_top;
 
-// 判断位置和速度是否合理
-  inline bool isValid(const Eigen::Vector3d& p, const Eigen::Vector3d& v) const {
+  // 判断位置和速度是否合理
+  inline bool isValid(const Eigen::Vector3d& p,
+                      const Eigen::Vector3d& v) const {
     return (v.norm() < vmax) && (!map.isOccupied(p));
   }
 
@@ -59,7 +60,7 @@ struct Predict {
     // map.inflate_last();
   }
 
-// 实际用到的输出预测轨迹的代码。
+  // 实际用到的输出预测轨迹的代码。
   inline bool predict(const Eigen::Vector3d& target_p,
                       const Eigen::Vector3d& target_v,
                       std::vector<Eigen::Vector3d>& target_predcit,

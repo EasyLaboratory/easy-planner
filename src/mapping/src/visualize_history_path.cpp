@@ -108,11 +108,14 @@ int main(int argc, char** argv) {
 
   ros::NodeHandle n("~");
   ros::Subscriber cmd_sub = n.subscribe("/position_cmd", 100, cmd_callback);
-  ros::Subscriber target_odom_sub = n.subscribe("/object_odom_dtc2brig", 100, target_odom_callback);
+  ros::Subscriber target_odom_sub =
+      n.subscribe("/object_odom_dtc2brig", 100, target_odom_callback);
 
   drone_path_pub = n.advertise<nav_msgs::Path>("history_drone_pose", 100, true);
-  target_path_pub = n.advertise<nav_msgs::Path>("history_target_pose", 100, true);
-  lines_pub = n.advertise<visualization_msgs::Marker>("drone_target_link_line", 100, true);
+  target_path_pub =
+      n.advertise<nav_msgs::Path>("history_target_pose", 100, true);
+  lines_pub = n.advertise<visualization_msgs::Marker>("drone_target_link_line",
+                                                      100, true);
 
   spring_pub = n.advertise<nav_msgs::Path>("spring", 100, true);
 

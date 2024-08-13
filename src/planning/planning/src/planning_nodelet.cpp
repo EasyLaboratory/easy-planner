@@ -107,11 +107,10 @@ class Nodelet : public nodelet::Nodelet {
     // NOTE yaw
     traj_msg.yaw = yaw;
     traj_pub_.publish(traj_msg);
-    std::cout << "pub_traj pub_traj" << std::endl;
   }
 
   // 设置起点
-  // 给一个0 0 0.9
+  // 给一个0 0 0.9,现在已经删除了
   void triger_callback(const geometry_msgs::PoseStampedConstPtr& msgPtr) {
     goal_ << msgPtr->pose.position.x, msgPtr->pose.position.y, 0.9;
     triger_received_ = true;
@@ -166,21 +165,20 @@ class Nodelet : public nodelet::Nodelet {
 
   // NOTE main callback 无人机用到的回调函数
   void plan_timer_callback(const ros::TimerEvent& event) {
-    // std::cout << "plan_timer_callback" << std::endl;
     heartbeat_pub_.publish(std_msgs::Empty());
-    // std::cout << "odom_received_ = " << odom_received_ << std::endl;
-    // std::cout << "map_received_ = " << map_received_ << std::endl;
     if (!odom_received_ || !map_received_) {
       return;
     }
-    // std::cout << "after heartbeat_pub_." << std::endl;
     // obtain state of odom
     while (odom_lock_.test_and_set());
     auto odom_msg = odom_msg_;
     odom_lock_.clear();
+    // odom_p、odom_v、odom_q是ego的位置、速度和四元数信息
     Eigen::Vector3d odom_p(odom_msg.pose.pose.position.x,
                            odom_msg.pose.pose.position.y,
                            odom_msg.pose.pose.position.z);
+    ROS_INFO("in planning odom (x,y,z) = (%f,%f,%f)", odom_p.x(), odom_p.y(),
+             odom_p.z());
     Eigen::Vector3d odom_v(odom_msg.twist.twist.linear.x,
                            odom_msg.twist.twist.linear.y,
                            odom_msg.twist.twist.linear.z);
@@ -190,18 +188,21 @@ class Nodelet : public nodelet::Nodelet {
     // if (!triger_received_) {
     //   return;
     // }
-    // std::cout << "after  if (!triger_received_)" << std::endl;
+    // 这个是卡尔曼滤波完的标志
     if (!target_received_) {
       return;
     }
-    // std::cout << "after  if (!target_received_)" << std::endl;
     // NOTE obtain state of target
+    // 只要target是锁的状态就不动
     while (target_lock_.test_and_set());
     replanStateMsg_.target = target_msg_;
     target_lock_.clear();
+    // target_p、target_v、target_q是目标物体的信息
     Eigen::Vector3d target_p(replanStateMsg_.target.pose.pose.position.x,
                              replanStateMsg_.target.pose.pose.position.y,
                              replanStateMsg_.target.pose.pose.position.z);
+    ROS_INFO("in planning target postion (x,y,z) = (%f,%f,%f)", target_p.x(),
+             target_p.y(), target_p.z());
     Eigen::Vector3d target_v(replanStateMsg_.target.twist.twist.linear.x,
                              replanStateMsg_.target.twist.twist.linear.y,
                              replanStateMsg_.target.twist.twist.linear.z);
@@ -215,8 +216,8 @@ class Nodelet : public nodelet::Nodelet {
     if (force_hover_ && odom_v.norm() > 0.1) {
       return;
     }
-    std::cout << "after  if (force_hover_ && odom_v.norm() > 0.1)" << std::endl;
     // NOTE just for landing on the car!
+    // 这段是着陆使用的，目前没有被用到
     if (land_triger_received_) {
       if (std::fabs((target_p - odom_p).norm() < 0.1 && odom_v.norm() < 0.1 &&
                     target_v.norm() < 0.2)) {
@@ -232,16 +233,19 @@ class Nodelet : public nodelet::Nodelet {
       target_p = target_p + target_q * land_p_;
       wait_hover_ = false;
     } else {
-      std::cout << "after  no in land_triger_received_" << std::endl;
-      // todo 0812 定高飞行，记得修改
-      target_p.z() += 5.0;
+      // todo 0812 定高飞行，记得修改，原来是1.0
+      target_p.z() += 3.0;
       // NOTE determin whether to replan
+      // 计算当前位置和目标位置之间的差
       Eigen::Vector3d dp = target_p - odom_p;
-      // std::cout << "dist : " << dp.norm() << std::endl;
-      double desired_yaw = std::atan2(dp.y(), dp.x());
+      // TODO FXJ 在实际的飞机上需要修改
+      double desired_yaw = std::atan2(dp.y(), dp.x()) - M_PI / 2.0;
+      ROS_INFO("desired_yaw = %f", desired_yaw);
       Eigen::Vector3d project_yaw =
           odom_q.toRotationMatrix().col(0);  // NOTE ZYX
       double now_yaw = std::atan2(project_yaw.y(), project_yaw.x());
+
+      ROS_INFO("now_yaw = %f", now_yaw);
       if (std::fabs((target_p - odom_p).norm() - tracking_dist_) <
               tolerance_d_ &&
           odom_v.norm() < 0.1 && target_v.norm() < 0.2 &&
@@ -279,8 +283,8 @@ class Nodelet : public nodelet::Nodelet {
     bool generate_new_traj_success =
         prePtr_->predict(target_p, target_v, target_predcit);
     ros::Time t_stop = ros::Time::now();
-    std::cout << "predict costs: " << (t_stop - t_start).toSec() * 1e3 << "ms"
-              << std::endl;
+    double cost_time = (t_stop - t_start).toSec() * 1e3;
+    ROS_INFO("cost time: %f ms", cost_time);
     if (generate_new_traj_success) {
       Eigen::Vector3d observable_p = target_predcit.back();
       visPtr_->visualize_path(target_predcit, "car_predict");
@@ -339,8 +343,8 @@ class Nodelet : public nodelet::Nodelet {
             envPtr_->short_astar(p_start, target_p, path);
       } else {
         // std::cout << "generate_new_traj_success =
-        // envPtr_->findVisiblePath(p_start, target_predcit, way_pts, path);" <<
-        // std::endl;
+        // envPtr_->findVisiblePath(p_start, target_predcit, way_pts, path);"
+        // << std::endl;
         generate_new_traj_success =
             envPtr_->findVisiblePath(p_start, target_predcit, way_pts, path);
       }
@@ -673,7 +677,7 @@ class Nodelet : public nodelet::Nodelet {
     visPtr_->visualize_traj(traj, "traj");
   }
 
-  // 目标实际用到的时间回调函数
+  // 目标物体实际用到的时间回调函数
   void fake_timer_callback(const ros::TimerEvent& event) {
     heartbeat_pub_.publish(std_msgs::Empty());
     if (!odom_received_ || !map_received_) {
@@ -1048,7 +1052,6 @@ class Nodelet : public nodelet::Nodelet {
       plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz),
                                    &Nodelet::airsim_fake_timer_callback, this);
     } else {
-      std::cout << "now planning mode is normal!!!!!!!!!!!!" << std::endl;
       plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz),
                                    &Nodelet::plan_timer_callback, this);
     }

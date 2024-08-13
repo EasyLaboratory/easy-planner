@@ -257,8 +257,8 @@ void render_currentpose() {
       max = depth > max ? depth : max;
       depth_mat.at<float>(i, j) = depth;
     }
-  // ROS_INFO("render cost %lf ms.", (ros::Time::now().toSec() - this_time) *
-  // 1000.0f); printf("max_depth %lf.\n", max);
+  // ROS_INFO("render cost %lf ms.", (ros::Time::now().toSec() -
+  // this_time) * 1000.0f); printf("max_depth %lf.\n", max);
 
   cv_bridge::CvImage out_msg;
   out_msg.header.stamp = last_odom_stamp;
