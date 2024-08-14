@@ -70,6 +70,7 @@ class Nodelet : public nodelet::Nodelet {
   std::atomic_bool land_triger_received_ = ATOMIC_VAR_INIT(false);
 
   void pub_hover_p(const Eigen::Vector3d& hover_p, const ros::Time& stamp) {
+    ROS_INFO("WE ARE IN PUB HOBER P");
     quadrotor_msgs::PolyTraj traj_msg;
     traj_msg.hover = true;
     traj_msg.hover_p.resize(3);
@@ -79,10 +80,10 @@ class Nodelet : public nodelet::Nodelet {
     traj_msg.start_time = stamp;
     traj_msg.traj_id = traj_id_++;
     traj_pub_.publish(traj_msg);
-    std::cout << "pub_hover_p pub_hover_p" << std::endl;
   }
   void pub_traj(const Trajectory& traj, const double& yaw,
                 const ros::Time& stamp) {
+    ROS_INFO("WE ARE IN PUB TRAJ");
     quadrotor_msgs::PolyTraj traj_msg;
     traj_msg.hover = false;
     traj_msg.order = 5;
@@ -277,7 +278,7 @@ class Nodelet : public nodelet::Nodelet {
       visPtr_->visualize_arrow(odom_p, target_p, "ray", visualization::red);
     }
 
-    // NOTE prediction
+    // *********************生成目标物体预测轨迹的部分*********************
     std::vector<Eigen::Vector3d> target_predcit;
     ros::Time t_start = ros::Time::now();
     bool generate_new_traj_success =
@@ -285,12 +286,12 @@ class Nodelet : public nodelet::Nodelet {
     ros::Time t_stop = ros::Time::now();
     double cost_time = (t_stop - t_start).toSec() * 1e3;
     ROS_INFO("cost time: %f ms", cost_time);
+    // *********************生成目标物体预测轨迹的部分*********************
     if (generate_new_traj_success) {
       Eigen::Vector3d observable_p = target_predcit.back();
       visPtr_->visualize_path(target_predcit, "car_predict");
       std::vector<Eigen::Vector3d> observable_margin;
-      // tracking_dist_ = 2.0
-      // 这儿的目的是维护一个目标位置的圈。
+      // 这儿的目的是维护一个目标位置的圈，这个圈是自己必须到达目标物体俯视图的范围
       for (double theta = 0; theta <= 2 * M_PI; theta += 0.01) {
         observable_margin.emplace_back(
             observable_p +
@@ -299,17 +300,21 @@ class Nodelet : public nodelet::Nodelet {
       visPtr_->visualize_path(observable_margin, "observable_margin");
     }
 
-    // NOTE replan state
+    // *********************设置初始状态的部分*********************
     Eigen::MatrixXd iniState;
     iniState.setZero(3, 3);
     ros::Time replan_stamp = ros::Time::now() + ros::Duration(0.03);
     double replan_t = (replan_stamp - replan_stamp_).toSec();
     if (force_hover_ || replan_t > traj_poly_.getTotalDuration()) {
+      // 如果不正常状态的话就从上一帧规划的轨迹上拿参数
+      ROS_INFO("Force_hover_ || replan_t > traj_poly_.getTotalDuration()");
       // should replan from the hover state
       iniState.col(0) = odom_p;
       iniState.col(1) = odom_v;
     } else {
+      ROS_INFO("normal state, replan_t = %f", replan_t);
       // should replan from the last trajectory
+      // 如果正常状态的话就从上一帧规划的轨迹上递推得到初始状态点
       iniState.col(0) = traj_poly_.getPos(replan_t);
       iniState.col(1) = traj_poly_.getVel(replan_t);
       iniState.col(2) = traj_poly_.getAcc(replan_t);
@@ -318,8 +323,9 @@ class Nodelet : public nodelet::Nodelet {
     replanStateMsg_.iniState.resize(9);
     Eigen::Map<Eigen::MatrixXd>(replanStateMsg_.iniState.data(), 3, 3) =
         iniState;
+    // *********************设置初始状态的部分*********************
 
-    // NOTE path searching
+    // *********************利用A*生成初始轨迹的部分*********************
     Eigen::Vector3d p_start = iniState.col(0);
     std::vector<Eigen::Vector3d> path, way_pts;
 
@@ -343,9 +349,15 @@ class Nodelet : public nodelet::Nodelet {
         // A*的入口
         generate_new_traj_success =
             envPtr_->findVisiblePath(p_start, target_predcit, way_pts, path);
+        ROS_INFO("give a star start point (x, y, z) = (%f, %f, %f)",
+                 p_start.x(), p_start.y(), p_start.z());
+        ROS_INFO("target_predcit.size() = %lu", target_predcit.size());
+        ROS_INFO("way_pts.size() = %lu", way_pts.size());
+        ROS_INFO("path.size() = %lu", path.size());
       }
       // ros::Time t_end0 = ros::Time::now();
     }
+    // *********************利用A*生成初始轨迹的部分*********************
 
     std::vector<Eigen::Vector3d> visible_ps;
     std::vector<double> thetas;
@@ -357,9 +369,13 @@ class Nodelet : public nodelet::Nodelet {
           path.push_back(p);
         }
       } else {
+        // *********************生成扇形可视化区域*********************
         // NOTE generate visible regions
         target_predcit.pop_back();
         way_pts.pop_back();
+        ROS_INFO("in visible regions target_predcit.size() = %lu",
+                 target_predcit.size());
+        ROS_INFO("in visible regions way_pts.size() = %lu", way_pts.size());
         // ros::Time t_front1 = ros::Time::now();
         envPtr_->generate_visible_regions(target_predcit, way_pts, visible_ps,
                                           thetas);
@@ -405,7 +421,7 @@ class Nodelet : public nodelet::Nodelet {
         generate_new_traj_success = trajOptPtr_->generate_traj(
             iniState, finState, target_predcit, hPolys, traj);
       } else {
-        // 生成轨迹的入口 FXJ
+        // 优化部分生成轨迹的入口 FXJ
         generate_new_traj_success =
             trajOptPtr_->generate_traj(iniState, finState, target_predcit,
                                        visible_ps, thetas, hPolys, traj);

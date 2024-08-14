@@ -58,6 +58,7 @@ class Env {
   NodePtr data_[MAX_MEMORY];
   double desired_dist_, theta_clearance_, tolerance_d_;
 
+  // 它帮助管理访问过的节点，以避免重复访问，并且在需要时创建新的节点。
   inline NodePtr visit(const Eigen::Vector3i& idx) {
     auto iter = visited_nodes_.find(idx);
     if (iter == visited_nodes_.end()) {
@@ -453,8 +454,7 @@ class Env {
     // initialization of datastructures
     std::priority_queue<NodePtr, std::vector<NodePtr>, NodeComparator> open_set;
     std::vector<std::pair<Eigen::Vector3i, double>> neighbors;
-    // NOTE 6-connected graph
-    // 6领接
+    // NOTE 6-connected graph 、6领接
     for (int i = 0; i < 3; ++i) {
       Eigen::Vector3i neighbor(0, 0, 0);
       neighbor[i] = 1;
@@ -467,7 +467,7 @@ class Env {
     // NOTE we should permit the start pos invalid! (for corridor generation)
     if (!curPtr->valid) {
       visited_nodes_.clear();
-      std::cout << "start postition invalid!" << std::endl;
+      ROS_INFO("start postition invalid!");
       return false;
     }
     curPtr->parent = nullptr;
@@ -523,6 +523,7 @@ class Env {
         std::cout << "[env] out of memory!" << std::endl;
       }
     }
+    // 回溯得到路径
     if (ret) {
       for (NodePtr ptr = curPtr; ptr != nullptr; ptr = ptr->parent) {
         idx_path.push_back(ptr->idx);
@@ -673,7 +674,10 @@ class Env {
   inline void visible_pair(const Eigen::Vector3d& center, Eigen::Vector3d& seed,
                            Eigen::Vector3d& visible_p, double& theta) {
     Eigen::Vector3d dp = seed - center;
+    // 起始点的角度
     double theta0 = atan2(dp.y(), dp.x());
+    ROS_INFO_STREAM("in visible_pair theta0: " << theta0);
+    // 根据地图的分辨率从得到角度对应的分辨率，因为  弧长 = 角度 * 半径
     double d_theta = mapPtr_->resolution / desired_dist_ / 2;
     double t_l, t_r;
     for (t_l = theta0 - d_theta; t_l > theta0 - M_PI; t_l -= d_theta) {
@@ -698,8 +702,10 @@ class Env {
     visible_p = center;
     visible_p.x() += desired_dist_ * cos(theta_v);
     visible_p.y() += desired_dist_ * sin(theta_v);
+    // 得到扇形左边界和扇形右边界的角分别是多大
     theta = (t_r - t_l) / 2;
     double theta_c = theta < theta_clearance_ ? theta : theta_clearance_;
+    // 判断点在左边还是在右边
     if (theta0 - t_l < theta_c) {
       seed = center;
       seed.x() += desired_dist_ * cos(t_l + theta_c);
@@ -712,11 +718,12 @@ class Env {
     return;
   }
 
-  // 入口可视点
+  // 可视点入口
   inline void generate_visible_regions(
       const std::vector<Eigen::Vector3d>& targets,
       std::vector<Eigen::Vector3d>& seeds,
       std::vector<Eigen::Vector3d>& visible_ps, std::vector<double>& thetas) {
+    // 这儿的seeds就是A*得到的初始轨迹上的所有起点，每段A*的起点
     assert(targets.size() == seeds.size());
     visible_ps.clear();
     thetas.clear();
