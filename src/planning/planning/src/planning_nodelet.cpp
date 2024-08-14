@@ -234,7 +234,7 @@ class Nodelet : public nodelet::Nodelet {
       wait_hover_ = false;
     } else {
       // todo 0812 定高飞行，记得修改，原来是1.0
-      target_p.z() += 3.0;
+      target_p.z() += 5.0;
       // NOTE determin whether to replan
       // 计算当前位置和目标位置之间的差
       Eigen::Vector3d dp = target_p - odom_p;
@@ -335,21 +335,16 @@ class Nodelet : public nodelet::Nodelet {
     // double t_path = 0;
 
     if (generate_new_traj_success) {
-      // std::cout << "generate_new_traj_successs!!!" << std::endl;
       // ros::Time t_front0 = ros::Time::now();
       if (land_triger_received_) {
-        // std::cout << "land_triger_received_!!!" << std::endl;
         generate_new_traj_success =
             envPtr_->short_astar(p_start, target_p, path);
       } else {
-        // std::cout << "generate_new_traj_success =
-        // envPtr_->findVisiblePath(p_start, target_predcit, way_pts, path);"
-        // << std::endl;
+        // A*的入口
         generate_new_traj_success =
             envPtr_->findVisiblePath(p_start, target_predcit, way_pts, path);
       }
       // ros::Time t_end0 = ros::Time::now();
-      // t_path += (t_end0 - t_front0).toSec() * 1e3;
     }
 
     std::vector<Eigen::Vector3d> visible_ps;
@@ -404,11 +399,13 @@ class Nodelet : public nodelet::Nodelet {
       finState.col(0) = path.back();
       finState.col(1) = target_v;
       // ros::Time t_front4 = ros::Time::now();
+      // 这个没有被用到
       if (land_triger_received_) {
         finState.col(0) = target_predcit.back();
         generate_new_traj_success = trajOptPtr_->generate_traj(
             iniState, finState, target_predcit, hPolys, traj);
       } else {
+        // 生成轨迹的入口 FXJ
         generate_new_traj_success =
             trajOptPtr_->generate_traj(iniState, finState, target_predcit,
                                        visible_ps, thetas, hPolys, traj);
@@ -964,7 +961,6 @@ class Nodelet : public nodelet::Nodelet {
       finState.setZero(3, 3);
       finState.col(0) = path.back();
       finState.col(1) = target_v;
-      // 期望轨迹是从这儿拿的
       generate_new_traj_success = trajOptPtr_->generate_traj(
           iniState, finState, target_predcit, visible_ps, thetas, hPolys, traj);
       visPtr_->visualize_traj(traj, "traj");

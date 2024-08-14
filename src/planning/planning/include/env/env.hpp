@@ -423,11 +423,13 @@ class Env {
     return true;
   };
 
-  // 基于A*算法的三维路径搜索
+  // 这是实际实现A*的函数
   inline bool findVisiblePath(const Eigen::Vector3i& start_idx,
                               const Eigen::Vector3i& end_idx,
                               std::vector<Eigen::Vector3i>& idx_path) {
     double stop_dist = desired_dist_ / mapPtr_->resolution;
+    // 当某个节点的启发式值足够小，并且从该节点到目标节点的路径没有障碍物时，函数返回
+    // true，表示满足停止条件，可以终止搜索。
     auto stopCondition = [&](const NodePtr& ptr) -> bool {
       return ptr->h < tolerance_d_ / mapPtr_->resolution &&
              rayValid(ptr->idx, end_idx);
@@ -435,13 +437,16 @@ class Env {
     auto calulateHeuristic = [&](const NodePtr& ptr) {
       Eigen::Vector3i dp = end_idx - ptr->idx;
       double dr = dp.head(2).norm();
+      // 变化的系数，希望在起点时
       double lambda = 1 - stop_dist / dr;
       double dx = lambda * dp.x();
       double dy = lambda * dp.y();
       double dz = dp.z();
+      // 实际使用的是曼哈顿距离
       ptr->h = fabs(dx) + fabs(dy) + abs(dz);
       double dx0 = (start_idx - end_idx).x();
       double dy0 = (start_idx - end_idx).y();
+      // cross用于检测当前节点的路径是否与起点到重点连线路径对齐，另外加的启发项
       double cross = fabs(dx * dy0 - dy * dx0) + abs(dz);
       ptr->h += 0.001 * cross;
     };
@@ -449,6 +454,7 @@ class Env {
     std::priority_queue<NodePtr, std::vector<NodePtr>, NodeComparator> open_set;
     std::vector<std::pair<Eigen::Vector3i, double>> neighbors;
     // NOTE 6-connected graph
+    // 6领接
     for (int i = 0; i < 3; ++i) {
       Eigen::Vector3i neighbor(0, 0, 0);
       neighbor[i] = 1;
@@ -529,6 +535,7 @@ class Env {
     return ret;
   }
 
+  // 基于A*算法的三维路径搜索，实际用到的是这个函数
   inline bool findVisiblePath(const Eigen::Vector3d& start_p,
                               const std::vector<Eigen::Vector3d>& targets,
                               std::vector<Eigen::Vector3d>& way_pts,
@@ -705,6 +712,7 @@ class Env {
     return;
   }
 
+  // 入口可视点
   inline void generate_visible_regions(
       const std::vector<Eigen::Vector3d>& targets,
       std::vector<Eigen::Vector3d>& seeds,

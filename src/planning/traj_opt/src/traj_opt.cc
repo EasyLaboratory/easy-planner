@@ -315,6 +315,7 @@ int TrajOpt::optimize(const double& delta) {
   return ret;
 }
 
+// 使用的是这个函数生成的轨迹
 bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
                             const Eigen::MatrixXd& finState,
                             const std::vector<Eigen::Vector3d>& target_predcit,
@@ -348,6 +349,7 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
   Eigen::VectorXd T(N_);
   Eigen::MatrixXd P(3, N_ - 1);
 
+  // 这个是预测的轨迹，里面存放的是预测点序列
   tracking_ps_ = target_predcit;
   tracking_visible_ps_ = visible_ps;
   tracking_thetas_ = thetas;
@@ -498,6 +500,7 @@ void TrajOpt::addTimeCost(double& cost) {
   double cost_tmp;
   Eigen::Matrix<double, 6, 3> gradViolaPc;
 
+  // 遍历预测轨迹
   for (int i = 0; i < M; ++i) {
     double rho = exp2(-3.0 * i / M);
     while (t - t_pre > T(piece)) {
@@ -526,9 +529,7 @@ void TrajOpt::addTimeCost(double& cost) {
         }
       }
     } else {
-      ROS_ERROR("elsesssssssssssssss");
       if (grad_cost_p_tracking(pos, target_p, grad_tmp, cost_tmp)) {
-        ROS_ERROR("grad_cost_p_tracking");
         gradViolaPc = beta0 * grad_tmp.transpose();
         cost += rho * step * cost_tmp;
         jerkOpt_.gdC.block<6, 3>(piece * 6, 0) += rho * step * gradViolaPc;
@@ -539,7 +540,6 @@ void TrajOpt::addTimeCost(double& cost) {
       // TODO occlusion
       if (grad_cost_visibility(pos, target_p, tracking_visible_ps_[i],
                                tracking_thetas_[i], grad_tmp, cost_tmp)) {
-        ROS_ERROR("grad_cost_visibility");
         gradViolaPc = beta0 * grad_tmp.transpose();
         cost += rho * step * cost_tmp;
         jerkOpt_.gdC.block<6, 3>(piece * 6, 0) += rho * step * gradViolaPc;
