@@ -369,7 +369,7 @@ class Nodelet : public nodelet::Nodelet {
           path.push_back(p);
         }
       } else {
-        // *********************生成扇形可视化区域*********************
+        // *********************生成扇形可视化区域并且生成种子*********************
         // NOTE generate visible regions
         target_predcit.pop_back();
         way_pts.pop_back();
@@ -379,6 +379,9 @@ class Nodelet : public nodelet::Nodelet {
         // ros::Time t_front1 = ros::Time::now();
         envPtr_->generate_visible_regions(target_predcit, way_pts, visible_ps,
                                           thetas);
+        // 把way_pts作处理得到seed，作为下面的输入，这个seed是根据可视区域得到的位于左右区域上的一个点，
+        // 他的确定原则是基于原来的点位于的区域，而后旋转一定角度得到的。
+        // thetas是左右的角度最大值，visible_ps是角平分线上的距离为允许距离的点
         // ros::Time t_end1 = ros::Time::now();
         // t_path += (t_end1 - t_front1).toSec() * 1e3;
         visPtr_->visualize_pointcloud(visible_ps, "visible_ps");
@@ -393,14 +396,18 @@ class Nodelet : public nodelet::Nodelet {
         visPtr_->visualize_pointcloud(way_pts, "way_pts");
         way_pts.insert(way_pts.begin(), p_start);
         // ros::Time t_front2 = ros::Time::now();
+        // 把点转化成路径，确保点不碰撞在障碍范围内一定范围内。
         envPtr_->pts2path(way_pts, path);
         // ros::Time t_end2 = ros::Time::now();
         // t_path += (t_end2 - t_front2).toSec() * 1e3;
       }
+      // *********************生成扇形可视化区域并且生成种子*********************
       // NOTE corridor generating
+      // *********************生成飞行走廊*********************
       std::vector<Eigen::MatrixXd> hPolys;
       std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> keyPts;
-
+      ROS_INFO("hPolys.size() = %lu", hPolys.size());
+      ROS_INFO("keyPts.size() = %lu", keyPts.size());
       // ros::Time t_front3 = ros::Time::now();
       envPtr_->generateSFC(path, 2.0, hPolys, keyPts);
       // ros::Time t_end3 = ros::Time::now();
@@ -408,12 +415,23 @@ class Nodelet : public nodelet::Nodelet {
 
       envPtr_->visCorridor(hPolys);
       visPtr_->visualize_pairline(keyPts, "keyPts");
+      // *********************生成飞行走廊*********************
 
+      // *********************轨迹优化部分*********************
       // NOTE trajectory optimization
       Eigen::MatrixXd finState;
       finState.setZero(3, 3);
+      // 末端状态
       finState.col(0) = path.back();
       finState.col(1) = target_v;
+      ROS_INFO("Final State Matrix:");
+      for (int i = 0; i < finState.rows(); ++i) {
+        std::ostringstream oss;
+        for (int j = 0; j < finState.cols(); ++j) {
+          oss << finState(i, j) << " ";
+        }
+        ROS_INFO("%s", oss.str().c_str());
+      }
       // ros::Time t_front4 = ros::Time::now();
       // 这个没有被用到
       if (land_triger_received_) {
@@ -421,11 +439,11 @@ class Nodelet : public nodelet::Nodelet {
         generate_new_traj_success = trajOptPtr_->generate_traj(
             iniState, finState, target_predcit, hPolys, traj);
       } else {
-        // 优化部分生成轨迹的入口 FXJ
         generate_new_traj_success =
             trajOptPtr_->generate_traj(iniState, finState, target_predcit,
                                        visible_ps, thetas, hPolys, traj);
       }
+      // *********************轨迹优化部分*********************
       // ros::Time t_end4 = ros::Time::now();
       // double t_optimization = (t_end4 - t_front4).toSec() * 1e3;
 

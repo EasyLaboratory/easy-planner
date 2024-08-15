@@ -11,20 +11,14 @@
 
 namespace visualization {
 using PublisherMap = std::unordered_map<std::string, ros::Publisher>;
-enum Color { white,
-             red,
-             green,
-             blue,
-             yellow,
-             greenblue };
+enum Color { white, red, green, blue, yellow, greenblue };
 
 class Visualization {
  private:
   ros::NodeHandle nh_;
   PublisherMap publisher_map_;
 
-  void setMarkerColor(visualization_msgs::Marker& marker,
-                      Color color = blue,
+  void setMarkerColor(visualization_msgs::Marker& marker, Color color = blue,
                       double a = 1) {
     marker.color.a = a;
     switch (color) {
@@ -61,30 +55,23 @@ class Visualization {
     }
   }
 
-  void setMarkerColor(visualization_msgs::Marker& marker,
-                      double a,
-                      double r,
-                      double g,
-                      double b) {
+  void setMarkerColor(visualization_msgs::Marker& marker, double a, double r,
+                      double g, double b) {
     marker.color.a = a;
     marker.color.r = r;
     marker.color.g = g;
     marker.color.b = b;
   }
 
-  void setMarkerScale(visualization_msgs::Marker& marker,
-                      const double& x,
-                      const double& y,
-                      const double& z) {
+  void setMarkerScale(visualization_msgs::Marker& marker, const double& x,
+                      const double& y, const double& z) {
     marker.scale.x = x;
     marker.scale.y = y;
     marker.scale.z = z;
   }
 
-  void setMarkerPose(visualization_msgs::Marker& marker,
-                     const double& x,
-                     const double& y,
-                     const double& z) {
+  void setMarkerPose(visualization_msgs::Marker& marker, const double& x,
+                     const double& y, const double& z) {
     marker.pose.position.x = x;
     marker.pose.position.y = y;
     marker.pose.position.z = z;
@@ -94,11 +81,8 @@ class Visualization {
     marker.pose.orientation.z = 0;
   }
   template <class ROTATION>
-  void setMarkerPose(visualization_msgs::Marker& marker,
-                     const double& x,
-                     const double& y,
-                     const double& z,
-                     const ROTATION& R) {
+  void setMarkerPose(visualization_msgs::Marker& marker, const double& x,
+                     const double& y, const double& z, const ROTATION& R) {
     marker.pose.position.x = x;
     marker.pose.position.y = y;
     marker.pose.position.z = z;
@@ -113,11 +97,8 @@ class Visualization {
   Visualization(ros::NodeHandle& nh) : nh_(nh) {}
 
   template <class CENTER, class TOPIC>
-  void visualize_a_ball(const CENTER& c,
-                        const double& r,
-                        const TOPIC& topic,
-                        const Color color = blue,
-                        const double a = 1) {
+  void visualize_a_ball(const CENTER& c, const double& r, const TOPIC& topic,
+                        const Color color = blue, const double a = 1) {
     auto got = publisher_map_.find(topic);
     if (got == publisher_map_.end()) {
       ros::Publisher pub = nh_.advertise<visualization_msgs::Marker>(topic, 10);
@@ -175,10 +156,8 @@ class Visualization {
   }
 
   template <class BALLS, class TOPIC>
-  void visualize_balls(const BALLS& balls,
-                       const TOPIC& topic,
-                       const Color color = blue,
-                       const double a = 0.2) {
+  void visualize_balls(const BALLS& balls, const TOPIC& topic,
+                       const Color color = blue, const double a = 0.2) {
     auto got = publisher_map_.find(topic);
     if (got == publisher_map_.end()) {
       ros::Publisher pub =
@@ -207,10 +186,8 @@ class Visualization {
   }
 
   template <class ELLIPSOID, class TOPIC>
-  void visualize_ellipsoids(const ELLIPSOID& ellipsoids,
-                            const TOPIC& topic,
-                            const Color color = blue,
-                            const double a = 0.2) {
+  void visualize_ellipsoids(const ELLIPSOID& ellipsoids, const TOPIC& topic,
+                            const Color color = blue, const double a = 0.2) {
     auto got = publisher_map_.find(topic);
     if (got == publisher_map_.end()) {
       ros::Publisher pub =
@@ -265,7 +242,8 @@ class Visualization {
   }
 
   template <class TOPIC>
-  void visualize_arrow(const Eigen::Vector3d p0, const Eigen::Vector3d& p1, const TOPIC& topic, const Color& color = blue) {
+  void visualize_arrow(const Eigen::Vector3d p0, const Eigen::Vector3d& p1,
+                       const TOPIC& topic, const Color& color = blue) {
     auto got = publisher_map_.find(topic);
     if (got == publisher_map_.end()) {
       ros::Publisher pub = nh_.advertise<visualization_msgs::Marker>(topic, 10);
@@ -321,7 +299,8 @@ class Visualization {
       geometry_msgs::Point p = center;
       p.x += r * cos(theta0 - thetas[i]);
       p.y += r * sin(theta0 - thetas[i]);
-      for (double theta = theta0 - thetas[i] + 0.1; theta < theta0 + thetas[i]; theta += 0.1) {
+      for (double theta = theta0 - thetas[i] + 0.1; theta < theta0 + thetas[i];
+           theta += 0.1) {
         marker.points.push_back(center);
         marker.points.push_back(p);
         p = center;

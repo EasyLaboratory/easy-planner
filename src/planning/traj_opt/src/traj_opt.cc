@@ -14,6 +14,7 @@ static double expC2(double t) {
                  : 1.0 / ((0.5 * t - 1.0) * t + 1.0);
 }
 
+// 这是lnx
 static double logC2(double T) {
   return T > 1.0 ? (sqrt(2.0 * T - 1.0) - 1.0) : (1.0 - sqrt(2.0 / T - 1.0));
 }
@@ -182,9 +183,13 @@ static inline double objectiveFunc(void* ptrObj, const double* x, double* grad,
   forwardP(p, obj.cfgVs_, P);
 
   obj.jerkOpt_.generate(P, T);
+  // 计算关于jerk的代价
   double cost = obj.jerkOpt_.getTrajJerkCost();
+  // 计算关于时间的梯度
   obj.jerkOpt_.calGrads_CT();
+  // 关于走廊和执行能力的代价
   obj.addTimeIntPenalty(cost);
+  // 关于距离保持和扇形区域的约束
   obj.addTimeCost(cost);
   obj.jerkOpt_.calGrads_PT();
   grad[obj.dim_t_ + obj.dim_p_] = obj.jerkOpt_.gdT.dot(T) / sumT + obj.rhoT_;
@@ -192,7 +197,6 @@ static inline double objectiveFunc(void* ptrObj, const double* x, double* grad,
   grad[obj.dim_t_ + obj.dim_p_] *= 2 * deltaT;
   addLayerTGrad(t, sumT, obj.jerkOpt_.gdT, gradt);
   addLayerPGrad(p, obj.cfgVs_, obj.jerkOpt_.gdP, gradp);
-
   return cost;
 }
 
@@ -269,15 +273,18 @@ void TrajOpt::setBoundConds(const Eigen::MatrixXd& iniState,
   Eigen::MatrixXd initS = iniState;
   Eigen::MatrixXd finalS = finState;
   double tempNorm = initS.col(1).norm();
+  // 归一化速度
   initS.col(1) *= tempNorm > vmax_ ? (vmax_ / tempNorm) : 1.0;
   tempNorm = finalS.col(1).norm();
   finalS.col(1) *= tempNorm > vmax_ ? (vmax_ / tempNorm) : 1.0;
   tempNorm = initS.col(2).norm();
+  // 归一化加速度
   initS.col(2) *= tempNorm > amax_ ? (amax_ / tempNorm) : 1.0;
   tempNorm = finalS.col(2).norm();
   finalS.col(2) *= tempNorm > amax_ ? (amax_ / tempNorm) : 1.0;
 
   Eigen::VectorXd T(N_);
+  // 将其所有元素初始化为平均时间 sum_T_ / N_
   T.setConstant(sum_T_ / N_);
   backwardT(T, t_);
   Eigen::MatrixXd P(3, N_ - 1);
@@ -315,7 +322,7 @@ int TrajOpt::optimize(const double& delta) {
   return ret;
 }
 
-// 使用的是这个函数生成的轨迹
+// 优化部分的入口
 bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
                             const Eigen::MatrixXd& finState,
                             const std::vector<Eigen::Vector3d>& target_predcit,
@@ -328,6 +335,7 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
   if (cfgHs_.size() == 1) {
     cfgHs_.push_back(cfgHs_[0]);
   }
+  // 利用走廊生成速度期望序列。
   if (!extractVs(cfgHs_, cfgVs_)) {
     ROS_ERROR("extractVs fail!");
     return false;
@@ -342,7 +350,8 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
   for (const auto& cfgV : cfgVs_) {
     dim_p_ += cfgV.cols() - 1;
   }
-  // std::cout << "dim_p_: " << dim_p_ << std::endl;
+  ROS_INFO("dim_t_: %d", dim_t_);
+  ROS_INFO("dim_t_: %d", dim_t_);
   p_.resize(dim_p_);
   t_.resize(dim_t_);
   x_ = new double[dim_p_ + dim_t_ + 1];
@@ -351,9 +360,12 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
 
   // 这个是预测的轨迹，里面存放的是预测点序列
   tracking_ps_ = target_predcit;
+  // 这是扇形区域的点序列
   tracking_visible_ps_ = visible_ps;
+  // 这是扇形区域的夹角
   tracking_thetas_ = thetas;
 
+  // 设置约束
   setBoundConds(iniState, finState);
   x_[dim_p_ + dim_t_] = 0.1;
   int opt_ret = optimize();
@@ -366,6 +378,7 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
   jerkOpt_.generate(P, T);
   // std::cout << "P: \n" << P << std::endl;
   // std::cout << "T: " << T.transpose() << std::endl;
+  // 所有的轨迹都是从这个点拿出来的jerkOpt_
   traj = jerkOpt_.getTraj();
   delete[] x_;
   return true;
@@ -421,7 +434,7 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
   delete[] x_;
   return true;
 }
-
+// 关于走廊和速度加速度的约束
 void TrajOpt::addTimeIntPenalty(double& cost) {
   Eigen::Vector3d pos, vel, acc, jer;
   Eigen::Vector3d grad_tmp;
@@ -529,6 +542,7 @@ void TrajOpt::addTimeCost(double& cost) {
         }
       }
     } else {
+      // 距离保持约束
       if (grad_cost_p_tracking(pos, target_p, grad_tmp, cost_tmp)) {
         gradViolaPc = beta0 * grad_tmp.transpose();
         cost += rho * step * cost_tmp;
@@ -537,7 +551,7 @@ void TrajOpt::addTimeCost(double& cost) {
           jerkOpt_.gdT.head(piece).array() += -rho * step * grad_tmp.dot(vel);
         }
       }
-      // TODO occlusion
+      // TODO occlusion 扇形区域约束
       if (grad_cost_visibility(pos, target_p, tracking_visible_ps_[i],
                                tracking_thetas_[i], grad_tmp, cost_tmp)) {
         gradViolaPc = beta0 * grad_tmp.transpose();

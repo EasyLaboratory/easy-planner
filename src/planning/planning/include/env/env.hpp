@@ -287,6 +287,7 @@ class Env {
     return;
   }
 
+  // 有空读一下这个函数
   void generateSFC(
       const std::vector<Eigen::Vector3d>& path, const double bbox_width,
       std::vector<Eigen::MatrixXd>& hPolys,
@@ -294,6 +295,7 @@ class Env {
     assert(path.size() > 1);
     vec_Vec3f obs_pc;
     EllipsoidDecomp3D decomp_util;
+    // 确定box的参数
     decomp_util.set_local_bbox(
         Eigen::Vector3d(bbox_width, bbox_width, bbox_width));
 
@@ -676,7 +678,7 @@ class Env {
     Eigen::Vector3d dp = seed - center;
     // 起始点的角度
     double theta0 = atan2(dp.y(), dp.x());
-    ROS_INFO_STREAM("in visible_pair theta0: " << theta0);
+    // ROS_INFO_STREAM("in visible_pair theta0: " << theta0);
     // 根据地图的分辨率从得到角度对应的分辨率，因为  弧长 = 角度 * 半径
     double d_theta = mapPtr_->resolution / desired_dist_ / 2;
     double t_l, t_r;
@@ -730,6 +732,8 @@ class Env {
     Eigen::Vector3d visible_p;
     double theta = 0;
     int M = targets.size();
+    // seeds是A*找到的点
+    // 给每一个目标点维护一个扇形区域
     for (int i = 0; i < M; ++i) {
       visible_pair(targets[i], seeds[i], visible_p, theta);
       visible_ps.push_back(visible_p);

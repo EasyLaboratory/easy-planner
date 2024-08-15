@@ -2,20 +2,19 @@
     MIT License
     Copyright (c) 2021 Zhepei Wang (wangzhepei@live.com)
     Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
+    of this software and associated documentation files (the "Software"), to
+   deal in the Software without restriction, including without limitation the
+   rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+   sell copies of the Software, and to permit persons to whom the Software is
     furnished to do so, subject to the following conditions:
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
+    The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED
+   "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+   LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+   PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+   HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+   WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #ifndef GEOUTILS_HPP
@@ -42,7 +41,11 @@ inline bool findInterior(const Eigen::MatrixXd &hPoly,
   Eigen::VectorXd b(m), c(4), x(4);
   A.leftCols<3>() = hPoly.topRows<3>().transpose();
   A.rightCols<1>().setConstant(1.0);
-  b = hPoly.topRows<3>().cwiseProduct(hPoly.bottomRows<3>()).colwise().sum().transpose();
+  b = hPoly.topRows<3>()
+          .cwiseProduct(hPoly.bottomRows<3>())
+          .colwise()
+          .sum()
+          .transpose();
   c.setZero();
   c(3) = -1.0;
 
@@ -60,7 +63,11 @@ inline double findInteriorDist(const Eigen::MatrixXd &hPoly,
   Eigen::VectorXd b(m), c(4), x(4);
   A.leftCols<3>() = hPoly.topRows<3>().transpose();
   A.rightCols<1>().setConstant(1.0);
-  b = hPoly.topRows<3>().cwiseProduct(hPoly.bottomRows<3>()).colwise().sum().transpose();
+  b = hPoly.topRows<3>()
+          .cwiseProduct(hPoly.bottomRows<3>())
+          .colwise()
+          .sum()
+          .transpose();
   c.setZero();
   c(3) = -1.0;
 
@@ -71,18 +78,13 @@ inline double findInteriorDist(const Eigen::MatrixXd &hPoly,
 }
 
 struct filterLess {
-  inline bool operator()(const Eigen::Vector3d &l,
-                         const Eigen::Vector3d &r) {
+  inline bool operator()(const Eigen::Vector3d &l, const Eigen::Vector3d &r) {
     return l(0) < r(0) ||
-           (l(0) == r(0) &&
-            (l(1) < r(1) ||
-             (l(1) == r(1) &&
-              l(2) < r(2))));
+           (l(0) == r(0) && (l(1) < r(1) || (l(1) == r(1) && l(2) < r(2))));
   }
 };
 
-inline void filterVs(const Eigen::MatrixXd &rV,
-                     const double &epsilon,
+inline void filterVs(const Eigen::MatrixXd &rV, const double &epsilon,
                      Eigen::MatrixXd &fV) {
   double mag = std::max(fabs(rV.maxCoeff()), fabs(rV.minCoeff()));
   double res = mag * std::max(fabs(epsilon) / mag, DBL_EPSILON);
@@ -106,17 +108,18 @@ inline void filterVs(const Eigen::MatrixXd &rV,
 // The outter_normal is assumed to be NORMALIZED
 // proposed epsilon is 1.0e-6
 inline void enumerateVs(const Eigen::MatrixXd &hPoly,
-                        const Eigen::Vector3d &inner,
-                        Eigen::MatrixXd &vPoly,
+                        const Eigen::Vector3d &inner, Eigen::MatrixXd &vPoly,
                         const double epsilon = 1.0e-6) {
-  Eigen::RowVectorXd b = hPoly.topRows<3>().cwiseProduct(hPoly.bottomRows<3>()).colwise().sum() -
-                         inner.transpose() * hPoly.topRows<3>();
+  Eigen::RowVectorXd b =
+      hPoly.topRows<3>().cwiseProduct(hPoly.bottomRows<3>()).colwise().sum() -
+      inner.transpose() * hPoly.topRows<3>();
   Eigen::MatrixXd A = hPoly.topRows<3>().array().rowwise() / b.array();
 
   quickhull::QuickHull<double> qh;
   double qhullEps = std::min(epsilon, quickhull::defaultEps<double>());
   // CCW is false because the normal in quickhull towards interior
-  const auto cvxHull = qh.getConvexHull(A.data(), A.cols(), false, true, qhullEps);
+  const auto cvxHull =
+      qh.getConvexHull(A.data(), A.cols(), false, true, qhullEps);
   const auto &idBuffer = cvxHull.getIndexBuffer();
   int hNum = idBuffer.size() / 3;
   Eigen::MatrixXd rV(3, hNum);
@@ -125,7 +128,7 @@ inline void enumerateVs(const Eigen::MatrixXd &hPoly,
     point = A.col(idBuffer[3 * i + 1]);
     edge0 = point - A.col(idBuffer[3 * i]);
     edge1 = A.col(idBuffer[3 * i + 2]) - point;
-    normal = edge0.cross(edge1);  //cross in CW gives an outter normal
+    normal = edge0.cross(edge1);  // cross in CW gives an outter normal
     rV.col(i) = normal / normal.dot(point);
   }
   filterVs(rV, epsilon, vPoly);
@@ -136,8 +139,7 @@ inline void enumerateVs(const Eigen::MatrixXd &hPoly,
 // Each col of hPoly denotes a facet (outter_normal^T,point^T)^T
 // The outter_normal is assumed to be NORMALIZED
 // proposed epsilon is 1.0e-6
-inline bool enumerateVs(const Eigen::MatrixXd &hPoly,
-                        Eigen::MatrixXd &vPoly,
+inline bool enumerateVs(const Eigen::MatrixXd &hPoly, Eigen::MatrixXd &vPoly,
                         const double epsilon = 1.0e-6) {
   Eigen::Vector3d inner;
   if (findInterior(hPoly, inner)) {

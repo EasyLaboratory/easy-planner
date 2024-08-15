@@ -26,7 +26,7 @@
     
     <include file="$(find planning)/launch/planning_airsim.launch">
       <arg name="rhosVisibility_" value="10000.0"/>
-      <arg name="rhoTracking_" value="1000.0"/>
+      <arg name="rhoTracking_" value="10.0"/>
       <arg name="target_name_" value="/target_ekf_odom"/>
     </include>
   </group>

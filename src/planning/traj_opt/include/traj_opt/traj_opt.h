@@ -44,7 +44,8 @@ class TrajOpt {
   TrajOpt(ros::NodeHandle& nh);
   ~TrajOpt() {}
 
-  void setBoundConds(const Eigen::MatrixXd& iniState, const Eigen::MatrixXd& finState);
+  void setBoundConds(const Eigen::MatrixXd& iniState,
+                     const Eigen::MatrixXd& finState);
   int optimize(const double& delta = 1e-4);
   bool generate_traj(const Eigen::MatrixXd& iniState,
                      const Eigen::MatrixXd& finState,
@@ -67,27 +68,20 @@ class TrajOpt {
   void addTimeCost(double& cost);
   bool grad_cost_p_corridor(const Eigen::Vector3d& p,
                             const Eigen::MatrixXd& hPoly,
-                            Eigen::Vector3d& gradp,
-                            double& costp);
+                            Eigen::Vector3d& gradp, double& costp);
   bool grad_cost_p_tracking(const Eigen::Vector3d& p,
                             const Eigen::Vector3d& target_p,
-                            Eigen::Vector3d& gradp,
-                            double& costp);
+                            Eigen::Vector3d& gradp, double& costp);
   bool grad_cost_p_landing(const Eigen::Vector3d& p,
                            const Eigen::Vector3d& target_p,
-                           Eigen::Vector3d& gradp,
-                           double& costp);
+                           Eigen::Vector3d& gradp, double& costp);
   bool grad_cost_visibility(const Eigen::Vector3d& p,
                             const Eigen::Vector3d& center,
-                            const Eigen::Vector3d& vis_p,
-                            const double& theta,
-                            Eigen::Vector3d& gradp,
-                            double& costp);
-  bool grad_cost_v(const Eigen::Vector3d& v,
-                   Eigen::Vector3d& gradv,
+                            const Eigen::Vector3d& vis_p, const double& theta,
+                            Eigen::Vector3d& gradp, double& costp);
+  bool grad_cost_v(const Eigen::Vector3d& v, Eigen::Vector3d& gradv,
                    double& costv);
-  bool grad_cost_a(const Eigen::Vector3d& a,
-                   Eigen::Vector3d& grada,
+  bool grad_cost_a(const Eigen::Vector3d& a, Eigen::Vector3d& grada,
                    double& costa);
 };
 
