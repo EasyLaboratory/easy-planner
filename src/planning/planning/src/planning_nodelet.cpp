@@ -40,6 +40,7 @@ class Nodelet : public nodelet::Nodelet {
 
   // NOTE planning or fake target
   bool fake_ = false;
+  double relative_height_ = 2.0;
   Eigen::Vector3d goal_;
   Eigen::Vector3d land_p_;
   Eigen::Quaterniond land_q_;
@@ -83,7 +84,6 @@ class Nodelet : public nodelet::Nodelet {
   }
   void pub_traj(const Trajectory& traj, const double& yaw,
                 const ros::Time& stamp) {
-    ROS_INFO("WE ARE IN PUB TRAJ");
     quadrotor_msgs::PolyTraj traj_msg;
     traj_msg.hover = false;
     traj_msg.order = 5;
@@ -235,12 +235,12 @@ class Nodelet : public nodelet::Nodelet {
       wait_hover_ = false;
     } else {
       // todo 0812 定高飞行，记得修改，原来是1.0
-      target_p.z() += 5.0;
+      target_p.z() += 2.5;
       // NOTE determin whether to replan
       // 计算当前位置和目标位置之间的差
       Eigen::Vector3d dp = target_p - odom_p;
       // TODO FXJ 在实际的飞机上需要修改
-      double desired_yaw = std::atan2(dp.y(), dp.x()) - M_PI / 2.0;
+      double desired_yaw = std::atan2(dp.y(), dp.x()) - M_PI;
       ROS_INFO("desired_yaw = %f", desired_yaw);
       Eigen::Vector3d project_yaw =
           odom_q.toRotationMatrix().col(0);  // NOTE ZYX
@@ -406,10 +406,11 @@ class Nodelet : public nodelet::Nodelet {
       // *********************生成飞行走廊*********************
       std::vector<Eigen::MatrixXd> hPolys;
       std::vector<std::pair<Eigen::Vector3d, Eigen::Vector3d>> keyPts;
-      ROS_INFO("hPolys.size() = %lu", hPolys.size());
-      ROS_INFO("keyPts.size() = %lu", keyPts.size());
+
       // ros::Time t_front3 = ros::Time::now();
       envPtr_->generateSFC(path, 2.0, hPolys, keyPts);
+      ROS_INFO("hPolys.size() = %lu", hPolys.size());
+      ROS_INFO("keyPts.size() = %lu", keyPts.size());
       // ros::Time t_end3 = ros::Time::now();
       // double t_corridor = (t_end3 - t_front3).toSec() * 1e3;
 
@@ -1053,6 +1054,7 @@ class Nodelet : public nodelet::Nodelet {
     nh.getParam("tolerance_d", tolerance_d_);
     nh.getParam("debug", debug_);
     nh.getParam("fake", fake_);
+    nh.getParam("relative_height", relative_height_);
 
     gridmapPtr_ = std::make_shared<mapping::OccGridMap>();
     envPtr_ = std::make_shared<env::Env>(nh, gridmapPtr_);

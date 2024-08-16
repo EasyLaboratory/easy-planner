@@ -31,7 +31,7 @@
     </include>
   </group>
   
-  <node pkg="tf" type="static_transform_publisher" name="world_to_world_enu" args="0 0 0 0 0 0 world world_enu 150"/>
+  <node pkg="tf" type="static_transform_publisher" name="world_to_world_enu" args="0 0 0 0 0 0 world world_enu 100"/>
 
 
 </launch>

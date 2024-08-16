@@ -351,7 +351,7 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
     dim_p_ += cfgV.cols() - 1;
   }
   ROS_INFO("dim_t_: %d", dim_t_);
-  ROS_INFO("dim_t_: %d", dim_t_);
+  ROS_INFO("dim_p_: %d", dim_p_);
   p_.resize(dim_p_);
   t_.resize(dim_t_);
   x_ = new double[dim_p_ + dim_t_ + 1];
