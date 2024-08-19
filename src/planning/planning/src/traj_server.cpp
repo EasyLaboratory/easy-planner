@@ -18,7 +18,10 @@ bool receive_traj_ = false;
 bool flight_start_ = false;
 quadrotor_msgs::PolyTraj trajMsg_, trajMsg_last_;
 Eigen::Vector3d last_p_;
-double last_yaw_ = 0;
+// TODO(fxj)
+// 这是游戏、仿真或者实际中的yaw的起始航向角，因为在airsim中的方向恰好和代码中整个坐标系转换了一下，
+// 所以初始航向较需要定义为M_PI/ 2.0，这个是参与一开始运算的，需要定义下，在实际的无人机中一定要注意这个点！！！
+double last_yaw_ = M_PI / 2.0;
 
 inline void normalizeYaw(double *yaw) {
   *yaw = fmod(*yaw, 2 * M_PI);
@@ -67,7 +70,7 @@ void publish_cmd(int traj_id, const Eigen::Vector3d &p,
   point.velocity.z = v(2);  // Assume constant altitude
 
   normalizeYaw(&y);  // Normalize yaw
-  point.yaw = y + M_PI / 2.0;
+  point.yaw = y - M_PI / 2.0;
   ROS_INFO("TO airsim point (x,y,z) = (%f,%f,%f)", point.position.x,
            point.position.y, point.position.z);
   ROS_INFO("TO airsim yaw = (%f)", point.yaw);

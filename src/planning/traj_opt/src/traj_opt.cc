@@ -373,6 +373,7 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
     return false;
   }
   double sumT = sum_T_ + x_[dim_p_ + dim_t_] * x_[dim_p_ + dim_t_];
+  ROS_INFO("SumT: %f", sumT);
   forwardT(t_, sumT, T);
   forwardP(p_, cfgVs_, P);
   jerkOpt_.generate(P, T);

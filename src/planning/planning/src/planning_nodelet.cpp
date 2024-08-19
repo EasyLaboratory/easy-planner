@@ -149,6 +149,7 @@ class Nodelet : public nodelet::Nodelet {
     odom_received_ = true;
     odom_lock_.clear();
   }
+
   void target_callback(const nav_msgs::Odometry::ConstPtr& msgPtr) {
     while (target_lock_.test_and_set());
     target_msg_ = *msgPtr;
@@ -166,6 +167,9 @@ class Nodelet : public nodelet::Nodelet {
 
   // NOTE main callback 无人机用到的回调函数
   void plan_timer_callback(const ros::TimerEvent& event) {
+    ROS_INFO(
+        "----------------------------------------------------------------------"
+        "----------------------------");
     heartbeat_pub_.publish(std_msgs::Empty());
     if (!odom_received_ || !map_received_) {
       return;
@@ -235,12 +239,12 @@ class Nodelet : public nodelet::Nodelet {
       wait_hover_ = false;
     } else {
       // todo 0812 定高飞行，记得修改，原来是1.0
-      target_p.z() += 2.5;
+      target_p.z() += relative_height_;
       // NOTE determin whether to replan
       // 计算当前位置和目标位置之间的差
       Eigen::Vector3d dp = target_p - odom_p;
-      // TODO FXJ 在实际的飞机上需要修改
-      double desired_yaw = std::atan2(dp.y(), dp.x()) - M_PI;
+      // TODO FXJ 在实际的飞机上需要修改!!!!
+      double desired_yaw = std::atan2(dp.y(), dp.x()) - M_PI / 2.0;
       ROS_INFO("desired_yaw = %f", desired_yaw);
       Eigen::Vector3d project_yaw =
           odom_q.toRotationMatrix().col(0);  // NOTE ZYX
@@ -307,6 +311,13 @@ class Nodelet : public nodelet::Nodelet {
     double replan_t = (replan_stamp - replan_stamp_).toSec();
     if (force_hover_ || replan_t > traj_poly_.getTotalDuration()) {
       // 如果不正常状态的话就从上一帧规划的轨迹上拿参数
+      std::string tmp = "";
+      if (force_hover_) {
+        tmp = "now is force hover state!!!!";
+      } else {
+        tmp = "now is not force hover state!!!!";
+      }
+      ROS_INFO("NOW STATE ==== %s", tmp);
       ROS_INFO("Force_hover_ || replan_t > traj_poly_.getTotalDuration()");
       // should replan from the hover state
       iniState.col(0) = odom_p;
@@ -327,6 +338,14 @@ class Nodelet : public nodelet::Nodelet {
 
     // *********************利用A*生成初始轨迹的部分*********************
     Eigen::Vector3d p_start = iniState.col(0);
+    ROS_INFO("Initial State Matrix:");
+    for (int i = 0; i < iniState.rows(); ++i) {
+      std::ostringstream oss;
+      for (int j = 0; j < iniState.cols(); ++j) {
+        oss << iniState(i, j) << " ";
+      }
+      ROS_INFO("%s", oss.str().c_str());
+    }
     std::vector<Eigen::Vector3d> path, way_pts;
 
     // NOTE calculate time of path searching, corridor generation and
@@ -349,7 +368,7 @@ class Nodelet : public nodelet::Nodelet {
         // A*的入口
         generate_new_traj_success =
             envPtr_->findVisiblePath(p_start, target_predcit, way_pts, path);
-        ROS_INFO("give a star start point (x, y, z) = (%f, %f, %f)",
+        ROS_INFO("give A STAR start point (x, y, z) = (%f, %f, %f)",
                  p_start.x(), p_start.y(), p_start.z());
         ROS_INFO("target_predcit.size() = %lu", target_predcit.size());
         ROS_INFO("way_pts.size() = %lu", way_pts.size());
@@ -434,6 +453,7 @@ class Nodelet : public nodelet::Nodelet {
         ROS_INFO("%s", oss.str().c_str());
       }
       // ros::Time t_front4 = ros::Time::now();
+
       // 这个没有被用到
       if (land_triger_received_) {
         finState.col(0) = target_predcit.back();
@@ -484,6 +504,7 @@ class Nodelet : public nodelet::Nodelet {
       //   dp = un_known_p - odom_p;
       // }
       double yaw = std::atan2(dp.y(), dp.x());
+      ROS_INFO("in valid yaw = %f", yaw);
       if (land_triger_received_) {
         yaw = 2 * std::atan2(target_q.z(), target_q.w());
       }
