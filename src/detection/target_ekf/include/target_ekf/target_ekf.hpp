@@ -74,17 +74,20 @@ struct Ekf {
     Rt(5, 5) = 0.01;
     x.setZero(9);
   }
+
   inline void predict() {
     x = A * x;
     Sigma = A * Sigma * A.transpose() + B * Qt * B.transpose();
     return;
   }
+
   inline void reset(const Eigen::Vector3d& z, const Eigen::Vector3d& z_rpy) {
     x.setZero();
     x.head(3) = z;
     x.tail(3) = z_rpy;
     Sigma.setZero();
   }
+
   inline bool update(const Eigen::Vector3d& z, const Eigen::Vector3d& z_rqp) {
     K = Sigma * C.transpose() * (C * Sigma * C.transpose() + Rt).inverse();
     Eigen::VectorXd zz(6);
@@ -92,11 +95,12 @@ struct Ekf {
     zz.tail(3) = z_rqp;
     Eigen::VectorXd x_tmp = x + K * (zz - C * x);
     // NOTE check valid
-    static double vmax = 4;
-    if (x_tmp.middleRows(3, 3).norm() > vmax) {
-      return false;
-    }
+    // static double vmax = 4;
+    // if (x_tmp.middleRows(3, 3).norm() > vmax) {
+    //   return false;
+    // }
     Eigen::Vector3d d_rpy = x.tail(3) - z_rqp;
+    // 保证角度在 [-pi, pi]，但是不会更新 roll, pitch, yaw
     x.tail(3).x() = d_rpy.x() > M_PI ? x.tail(3).x() - 2 * M_PI : x.tail(3).x();
     x.tail(3).y() = d_rpy.y() > M_PI ? x.tail(3).y() - 2 * M_PI : x.tail(3).y();
     x.tail(3).z() = d_rpy.z() > M_PI ? x.tail(3).z() - 2 * M_PI : x.tail(3).z();

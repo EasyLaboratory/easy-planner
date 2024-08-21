@@ -317,8 +317,8 @@ class Nodelet : public nodelet::Nodelet {
       } else {
         tmp = "now is not force hover state!!!!";
       }
-      ROS_INFO("NOW STATE ==== %s", tmp);
-      ROS_INFO("Force_hover_ || replan_t > traj_poly_.getTotalDuration()");
+      ROS_INFO("NOW STATE ==== %s", tmp.c_str());
+      ROS_INFO("Ntraj_poly_.getTotalDuration() = %f", traj_poly_.getTotalDuration());
       // should replan from the hover state
       iniState.col(0) = odom_p;
       iniState.col(1) = odom_v;
@@ -504,7 +504,6 @@ class Nodelet : public nodelet::Nodelet {
       //   dp = un_known_p - odom_p;
       // }
       double yaw = std::atan2(dp.y(), dp.x());
-      ROS_INFO("in valid yaw = %f", yaw);
       if (land_triger_received_) {
         yaw = 2 * std::atan2(target_q.z(), target_q.w());
       }

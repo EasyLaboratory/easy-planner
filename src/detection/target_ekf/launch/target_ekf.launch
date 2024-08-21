@@ -4,5 +4,6 @@
     <param name="pitch_thr" value="37"/>
     <remap from="~yolo" to="/yolov5trt/bboxes_pub"/>
     <remap from="~odom" to="/ekf/ekf_odom"/>
+    <param name="ekf_rate" value="20"/>
   </node>
 </launch>

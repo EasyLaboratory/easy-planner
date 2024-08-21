@@ -24,7 +24,7 @@ std::shared_ptr<Ekf> ekfPtr_;
 // 定时启动的回调函数
 void predict_state_callback(const ros::TimerEvent& event) {
   double update_dt = (ros::Time::now() - last_update_stamp_).toSec();
-  // std::cout << "predict_state_callback----------" << std::endl;
+  // 如果更新时间小于2s, 利用卡尔曼滤波进行预测，并且利用卡尔曼滤波更新速度和位置信息
   if (update_dt < 2.0) {
     ekfPtr_->predict();
   } else {
@@ -37,12 +37,21 @@ void predict_state_callback(const ros::TimerEvent& event) {
   target_odom.header.frame_id = "world";
   target_odom.pose.pose.position.x = ekfPtr_->pos().x();
   target_odom.pose.pose.position.y = ekfPtr_->pos().y();
-  target_odom.pose.pose.position.z = ekfPtr_->pos().z();
+  // target_odom.pose.pose.position.z = ekfPtr_->pos().z();
+  target_odom.pose.pose.position.z = 5.0;
+
   target_odom.twist.twist.linear.x = ekfPtr_->vel().x();
   target_odom.twist.twist.linear.y = ekfPtr_->vel().y();
   target_odom.twist.twist.linear.z = ekfPtr_->vel().z();
   Eigen::Vector3d rpy = ekfPtr_->rpy();
   Eigen::Quaterniond q = euler2quaternion(rpy);
+  ROS_INFO("through kalam target postion (x,y,z) = (%f,%f,%f)", ekfPtr_->pos().x(), ekfPtr_->pos().y(),
+           ekfPtr_->pos().z());
+  ROS_INFO("through kalam target vel (vx, vy, vz) = (%f,%f,%f)", ekfPtr_->vel().x(), ekfPtr_->vel().y(),
+           ekfPtr_->vel().z());
+  ROS_INFO("through kalam target vel = %f", ekfPtr_->vel().norm());
+  ROS_INFO("through kalam target rpy (roll, pitch, yaw) = (%f,%f,%f)", rpy.x(), rpy.y(),
+           rpy.z());
   target_odom.pose.pose.orientation.w = q.w();
   target_odom.pose.pose.orientation.x = q.x();
   target_odom.pose.pose.orientation.y = q.y();
@@ -77,11 +86,11 @@ void update_state_callback(const nav_msgs::OdometryConstPtr& target_msg,
   q.x() = target_msg->pose.pose.orientation.x;
   q.y() = target_msg->pose.pose.orientation.y;
   q.z() = target_msg->pose.pose.orientation.z;
-  ROS_INFO("through kalam target postion (x,y,z) = (%f,%f,%f)", p.x(), p.y(),
+  ROS_INFO("origin target postion (x,y,z) = (%f,%f,%f)", p.x(), p.y(),
            p.z());
-
   Eigen::Vector3d rpy = quaternion2euler(q);
-
+  ROS_INFO("origin target rpy (roll, pitch, yaw) = (%f,%f,%f)", rpy.x(), rpy.y(),
+           rpy.z());
   // NOTE check whether it's in FOV
   // check_fov_ = false 这个函数没有进来
   if (check_fov_) {
@@ -153,12 +162,13 @@ int main(int argc, char** argv) {
   // 这个没有被用到
   yolo_odom_pub_ = nh.advertise<nav_msgs::Odometry>("yolo_odom", 1);
 
-  int ekf_rate = 50;
+  int ekf_rate = 20;
   nh.getParam("ekf_rate", ekf_rate);
   ekfPtr_ = std::make_shared<Ekf>(1.0 / ekf_rate);
 
   // 订阅 YOLO 和 Odom 的里程计消息，并在这些消息同步到达时调用
   // update_state_callback 函数。
+  // 这个里面的yolo就是目标物体通过perception拿到的定位信息
   yolo_sub_.subscribe(nh, "yolo", 1, ros::TransportHints().tcpNoDelay());
   odom_sub_.subscribe(nh, "odom", 100, ros::TransportHints().tcpNoDelay());
   yolo_odom_sync_Ptr_ = std::make_shared<YoloOdomSynchronizer>(

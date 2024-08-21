@@ -21,6 +21,7 @@ using namespace arma;
 using namespace std;
 
 static string mesh_resource;
+static string car_mesh_resource;
 static double color_r, color_g, color_b, color_a, cov_scale, scale;
 bool cross_config = false;
 bool tf45 = false;
@@ -572,6 +573,7 @@ int main(int argc, char** argv) {
   // std::string("package://odom_visualization/meshes/hummingbird.mesh"));
   n.param("mesh_resource", mesh_resource,
           std::string("package://odom_visualization/meshes/f250.dae"));
+  n.param("car_mesh_resource", car_mesh_resource);
 
   n.param("color/r", color_r, 1.0);
   n.param("color/g", color_g, 0.0);

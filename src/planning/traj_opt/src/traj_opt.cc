@@ -373,7 +373,7 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
     return false;
   }
   double sumT = sum_T_ + x_[dim_p_ + dim_t_] * x_[dim_p_ + dim_t_];
-  ROS_INFO("SumT: %f", sumT);
+  ROS_INFO("optimize SumT: %f", sumT);
   forwardT(t_, sumT, T);
   forwardP(p_, cfgVs_, P);
   jerkOpt_.generate(P, T);
@@ -505,7 +505,6 @@ void TrajOpt::addTimeCost(double& cost) {
   int M = tracking_ps_.size() * 4 / 5;
   double t = 0;
   double t_pre = 0;
-
   double step = tracking_dt_;
   Eigen::Matrix<double, 6, 1> beta0, beta1;
   double s1, s2, s3, s4, s5;
@@ -726,6 +725,7 @@ bool TrajOpt::grad_cost_visibility(const Eigen::Vector3d& p,
   if (pen > 0) {
     double grad = 0;
     costp = penF2(pen, grad);
+    // 归一化
     gradp = grad * -(norm_a * b - inner_product / norm_a * a) / norm_a /
             norm_a / norm_b;
     // gradp = grad * (norm_b * cosTheta / norm_a * a - b);

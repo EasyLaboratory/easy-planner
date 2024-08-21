@@ -11,6 +11,7 @@
     </node>
     <node pkg="odom_visualization" name="odom_visualization" type="odom_visualization" output="screen">
       <remap from="~odom" to="odom" />
+      <param name="car_mesh_resource" value="package://odom_visualization/meshes/car.dae"/>
       <param name="robot_scale" value="1.0"/>
     </node>
     <node pkg="target_ekf" name="target_ekf_sim_node" type="target_ekf_sim_node" output="screen">
@@ -26,7 +27,7 @@
     
     <include file="$(find planning)/launch/planning_airsim.launch">
       <arg name="rhosVisibility_" value="10000.0"/>
-      <arg name="rhoTracking_" value="10.0"/>
+      <arg name="rhoTracking_" value="1000.0"/>
       <arg name="target_name_" value="/target_ekf_odom"/>
     </include>
   </group>

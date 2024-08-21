@@ -71,10 +71,10 @@ void publish_cmd(int traj_id, const Eigen::Vector3d &p,
 
   normalizeYaw(&y);  // Normalize yaw
   point.yaw = y - M_PI / 2.0;
-  ROS_INFO("TO airsim point (x,y,z) = (%f,%f,%f)", point.position.x,
+  ROS_INFO("TO airsim point (x, y, z) = (%f, %f, %f)", point.position.x,
            point.position.y, point.position.z);
-  ROS_INFO("TO airsim yaw = (%f)", point.yaw);
-  ROS_INFO("TO airsim point (vx,vy,vz) = (%f,%f,%f)", point.velocity.x,
+  ROS_INFO("TO airsim yaw = %f", point.yaw);
+  ROS_INFO("TO airsim point (vx, vy, vz) = (%f, %f, %f)", point.velocity.x,
            point.velocity.y, point.velocity.z);
   airsim_pos_cmd_pub_.publish(point);
   last_p_ = p;
