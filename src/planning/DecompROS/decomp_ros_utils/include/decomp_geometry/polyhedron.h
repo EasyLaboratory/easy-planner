@@ -24,9 +24,9 @@ struct Hyperplane {
     return std::abs(signed_dist(pt));
   }
 
-  /// Point on the plane
+  /// Point on the plane，平面上的点
   Vecf<Dim> p_;
-  /// Normal of the plane, directional
+  /// Normal of the plane, directional，平面的法向量，有方向性
   Vecf<Dim> n_;
 };
 

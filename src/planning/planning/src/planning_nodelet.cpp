@@ -170,6 +170,8 @@ class Nodelet : public nodelet::Nodelet {
     ROS_INFO(
         "----------------------------------------------------------------------"
         "----------------------------");
+    // 获取开始时间
+    ros::Time start_time = ros::Time::now();
     heartbeat_pub_.publish(std_msgs::Empty());
     if (!odom_received_ || !map_received_) {
       return;
@@ -461,6 +463,11 @@ class Nodelet : public nodelet::Nodelet {
                                        visible_ps, thetas, hPolys, traj);
       }
       // *********************轨迹优化部分*********************
+      // 获取结束时间
+      ros::Time end_time = ros::Time::now();
+      // 计算并输出执行时间
+      ros::Duration execution_time = end_time - start_time;
+      ROS_INFO("plan_timer_callback execution time = %f s", execution_time.toSec());
       // ros::Time t_end4 = ros::Time::now();
       // double t_optimization = (t_end4 - t_front4).toSec() * 1e3;
 

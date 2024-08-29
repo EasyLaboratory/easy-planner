@@ -189,7 +189,7 @@ static inline double objectiveFunc(void* ptrObj, const double* x, double* grad,
   obj.jerkOpt_.calGrads_CT();
   // 关于走廊和执行能力的代价
   obj.addTimeIntPenalty(cost);
-  // 关于距离保持和扇形区域的约束
+  // 关于距离保持和扇形区域的约束, 让点在圆环内+让角度在范围内
   obj.addTimeCost(cost);
   obj.jerkOpt_.calGrads_PT();
   grad[obj.dim_t_ + obj.dim_p_] = obj.jerkOpt_.gdT.dot(T) / sumT + obj.rhoT_;
@@ -364,7 +364,9 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
   tracking_visible_ps_ = visible_ps;
   // 这是扇形区域的夹角
   tracking_thetas_ = thetas;
-
+  for (int i = 0; i < tracking_thetas_.size(); ++i) {
+    ROS_INFO("theta[%d] = %f", i, tracking_thetas_.at(i));
+  }
   // 设置约束
   setBoundConds(iniState, finState);
   x_[dim_p_ + dim_t_] = 0.1;
@@ -551,7 +553,7 @@ void TrajOpt::addTimeCost(double& cost) {
           jerkOpt_.gdT.head(piece).array() += -rho * step * grad_tmp.dot(vel);
         }
       }
-      // TODO occlusion 扇形区域约束
+      // TODO occlusion 扇形区域约束->角度约束
       if (grad_cost_visibility(pos, target_p, tracking_visible_ps_[i],
                                tracking_thetas_[i], grad_tmp, cost_tmp)) {
         gradViolaPc = beta0 * grad_tmp.transpose();
@@ -574,6 +576,7 @@ bool TrajOpt::grad_cost_p_corridor(const Eigen::Vector3d& p,
   bool ret = false;
   gradp.setZero();
   costp = 0;
+  // ROS_INFO("hPoly.cols() = %d", hPoly.cols());
   for (int i = 0; i < hPoly.cols(); ++i) {
     Eigen::Vector3d norm_vec = hPoly.col(i).head<3>();
     double pen =
@@ -721,6 +724,7 @@ bool TrajOpt::grad_cost_visibility(const Eigen::Vector3d& p,
   double theta_less =
       theta - theta_clearance_ > 0 ? theta - theta_clearance_ : 0;
   double cosTheta = cos(theta_less);
+  // 这个是为了计算两个点的余弦值的差值，后面的inner_product / norm_a / norm_b是点集
   double pen = cosTheta - inner_product / norm_a / norm_b;
   if (pen > 0) {
     double grad = 0;
