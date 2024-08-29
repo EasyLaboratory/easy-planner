@@ -91,6 +91,8 @@ void update_state_callback(const nav_msgs::OdometryConstPtr& target_msg,
   Eigen::Vector3d rpy = quaternion2euler(q);
   ROS_INFO("origin target rpy (roll, pitch, yaw) = (%f,%f,%f)", rpy.x(), rpy.y(),
            rpy.z());
+  ROS_INFO("origin target (vx, vy, vz )= (%f, %f, %f)"
+           , target_msg->twist.twist.linear.x, target_msg->twist.twist.linear.y, target_msg->twist.twist.linear.z);
   // NOTE check whether it's in FOV
   // check_fov_ = false 这个函数没有进来
   if (check_fov_) {

@@ -193,10 +193,12 @@ class Nodelet : public nodelet::Nodelet {
     // if (!triger_received_) {
     //   return;
     // }
-    // 这个是卡尔曼滤波完的标志
+    // 这个是卡尔曼滤波成功的标志
+    ROS_INFO("******target_received_ = %s", target_received_ ? "true" : "false");
     if (!target_received_) {
       return;
     }
+    ROS_INFO("******force_hover_ = %s", force_hover_ ? "true" : "false");
     // NOTE obtain state of target
     // 只要target是锁的状态就不动
     while (target_lock_.test_and_set());
@@ -206,8 +208,6 @@ class Nodelet : public nodelet::Nodelet {
     Eigen::Vector3d target_p(replanStateMsg_.target.pose.pose.position.x,
                              replanStateMsg_.target.pose.pose.position.y,
                              replanStateMsg_.target.pose.pose.position.z);
-    ROS_INFO("in planning target postion (x,y,z) = (%f,%f,%f)", target_p.x(),
-             target_p.y(), target_p.z());
     Eigen::Vector3d target_v(replanStateMsg_.target.twist.twist.linear.x,
                              replanStateMsg_.target.twist.twist.linear.y,
                              replanStateMsg_.target.twist.twist.linear.z);
@@ -218,9 +218,10 @@ class Nodelet : public nodelet::Nodelet {
     target_q.z() = replanStateMsg_.target.pose.pose.orientation.z;
 
     // NOTE force-hover: waiting for the speed of drone small enough
-    if (force_hover_ && odom_v.norm() > 0.1) {
-      return;
-    }
+    ROS_INFO("******odom_v.norm() = %f", odom_v.norm());
+    // if (force_hover_ && odom_v.norm() > 0.1) {
+    //   return;
+    // }
     // NOTE just for landing on the car!
     // 这段是着陆使用的，目前没有被用到
     if (land_triger_received_) {
@@ -289,13 +290,14 @@ class Nodelet : public nodelet::Nodelet {
         prePtr_->predict(target_p, target_v, target_predcit);
     ros::Time t_stop = ros::Time::now();
     double cost_time = (t_stop - t_start).toSec() * 1e3;
-    ROS_INFO("cost time: %f ms", cost_time);
+    ROS_INFO("******predict cost time: %f ms", cost_time);
+    ROS_INFO("******generate predict trajectory = %s", generate_new_traj_success ? "true" : "false");
     // *********************生成目标物体预测轨迹的部分*********************
     if (generate_new_traj_success) {
       Eigen::Vector3d observable_p = target_predcit.back();
       visPtr_->visualize_path(target_predcit, "car_predict");
       std::vector<Eigen::Vector3d> observable_margin;
-      // 这儿的目的是维护一个目标位置的圈，这个圈是自己必须到达目标物体俯视图的范围
+      // 这儿的目的是显示一个目标位置的圈，这个圈是自己必须到达目标物体俯视图的范围
       for (double theta = 0; theta <= 2 * M_PI; theta += 0.01) {
         observable_margin.emplace_back(
             observable_p +
@@ -311,13 +313,6 @@ class Nodelet : public nodelet::Nodelet {
     double replan_t = (replan_stamp - replan_stamp_).toSec();
     if (force_hover_ || replan_t > traj_poly_.getTotalDuration()) {
       // 如果不正常状态的话就从上一帧规划的轨迹上拿参数
-      std::string tmp = "";
-      if (force_hover_) {
-        tmp = "now is force hover state!!!!";
-      } else {
-        tmp = "now is not force hover state!!!!";
-      }
-      ROS_INFO("NOW STATE ==== %s", tmp.c_str());
       ROS_INFO("Ntraj_poly_.getTotalDuration() = %f", traj_poly_.getTotalDuration());
       // should replan from the hover state
       iniState.col(0) = odom_p;
@@ -376,6 +371,7 @@ class Nodelet : public nodelet::Nodelet {
       }
       // ros::Time t_end0 = ros::Time::now();
     }
+    ROS_INFO("******generate A* trajectory = %s", generate_new_traj_success ? "true" : "false");
     // *********************利用A*生成初始轨迹的部分*********************
 
     std::vector<Eigen::Vector3d> visible_ps;
@@ -483,7 +479,7 @@ class Nodelet : public nodelet::Nodelet {
 
       visPtr_->visualize_traj(traj, "traj");
     }
-
+    ROS_INFO("******generate optimize trajectory = %s", generate_new_traj_success ? "true" : "false");
     // NOTE collision check
     bool valid = false;
     if (generate_new_traj_success) {
@@ -1088,7 +1084,6 @@ class Nodelet : public nodelet::Nodelet {
         nh.advertise<quadrotor_msgs::ReplanState>("replanState", 1);
 
     if (debug_) {
-      std::cout << "now planning mode is debug!!!!!!!!!!!!" << std::endl;
       plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz),
                                    &Nodelet::debug_timer_callback, this);
       // TODO read debug data from files
@@ -1098,9 +1093,7 @@ class Nodelet : public nodelet::Nodelet {
           nh.advertise<quadrotor_msgs::OccMap3d>("gridmap_inflate", 10);
       gridmapPtr_->from_msg(replanStateMsg_.occmap);
       prePtr_->setMap(*gridmapPtr_);
-      std::cout << "plan state: " << replanStateMsg_.state << std::endl;
     } else if (fake_) {
-      std::cout << "now planning mode is fake!!!!!!!!!!!!" << std::endl;
       plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz),
                                    &Nodelet::airsim_fake_timer_callback, this);
     } else {

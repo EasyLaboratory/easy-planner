@@ -90,13 +90,16 @@ struct Predict {
     curPtr->h = 0;
     curPtr->t = 0;
     double dt2_2 = dt * dt / 2;
-    // 做了一个采样，根据加速度上下限制-3到+3采样。
+    // 做了一个采样，根据加速度上下限制-3到+3采样，颗粒度为3。
     while (curPtr->t < pre_dur) {
+      ROS_INFO("curPtr->t = %f", curPtr->t);
       for (input.x() = -3; input.x() <= 3; input.x() += 3)
         for (input.y() = -3; input.y() <= 3; input.y() += 3) {
           // 位置和速度作匀加速运动的预测。
           Eigen::Vector3d p = curPtr->p + curPtr->v * dt + input * dt2_2;
           Eigen::Vector3d v = curPtr->v + input * dt;
+          bool tmp = isValid(p, v);
+          ROS_INFO("input (x, y) = (%f, %f), isValid = %s", input.x(), input.y(), tmp ? "true" : "false");
           if (!isValid(p, v)) {
             continue;
           }
@@ -124,6 +127,7 @@ struct Predict {
           // std::cout << "open set push: " << state.transpose() << std::endl;
         }
       if (open_set.empty()) {
+        // open_set.push(curPtr);
         std::cout << "[prediction] no way!" << std::endl;
         return false;
       }
