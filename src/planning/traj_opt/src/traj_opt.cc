@@ -1,3 +1,4 @@
+#include <ros/ros.h>
 #include <traj_opt/traj_opt.h>
 
 #include <random>
@@ -273,19 +274,26 @@ void TrajOpt::setBoundConds(const Eigen::MatrixXd& iniState,
   Eigen::MatrixXd initS = iniState;
   Eigen::MatrixXd finalS = finState;
   double tempNorm = initS.col(1).norm();
-  // 归一化速度
+  ROS_INFO("initS.col(1).norm() = %f", tempNorm);
+  // 归一化起点和终点的速度
   initS.col(1) *= tempNorm > vmax_ ? (vmax_ / tempNorm) : 1.0;
   tempNorm = finalS.col(1).norm();
+  ROS_INFO("finalS.col(1).norm() = %f", tempNorm);
   finalS.col(1) *= tempNorm > vmax_ ? (vmax_ / tempNorm) : 1.0;
   tempNorm = initS.col(2).norm();
-  // 归一化加速度
+  ROS_INFO("initS.col(2).norm() = %f", tempNorm);
+  // 归一化起点和终点的加速度
   initS.col(2) *= tempNorm > amax_ ? (amax_ / tempNorm) : 1.0;
   tempNorm = finalS.col(2).norm();
+  ROS_INFO("finalS.col(2).norm() = %f", tempNorm);
   finalS.col(2) *= tempNorm > amax_ ? (amax_ / tempNorm) : 1.0;
 
   Eigen::VectorXd T(N_);
-  // 将其所有元素初始化为平均时间 sum_T_ / N_
   T.setConstant(sum_T_ / N_);
+  for (int i = 0; i < T.size(); ++i) {
+    double value = T[i];
+    ROS_INFO("T[%d] = %f", i, value);
+  }
   backwardT(T, t_);
   Eigen::MatrixXd P(3, N_ - 1);
   for (int i = 0; i < N_ - 1; ++i) {
@@ -298,6 +306,7 @@ void TrajOpt::setBoundConds(const Eigen::MatrixXd& iniState,
   return;
 }
 
+// 其中const double& delta = 1e-4
 int TrajOpt::optimize(const double& delta) {
   // Setup for L-BFGS solver
   lbfgs::lbfgs_parameter_t lbfgs_params;
@@ -340,6 +349,34 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
     ROS_ERROR("extractVs fail!");
     return false;
   }
+  for (size_t i = 0; i < cfgHs_.size(); ++i) {
+    const Eigen::MatrixXd& matrix = cfgHs_[i];
+    ROS_INFO("corridor sequence cfgHs[%zu]: ", i);
+    for (int row = 0; row < matrix.rows(); ++row) {
+      std::stringstream ss;
+      for (int col = 0; col < matrix.cols(); ++col) {
+        ss << matrix(row, col);
+        if (col < matrix.cols() - 1) {
+          ss << ", ";
+        }
+      }
+      ROS_INFO("%s", ss.str().c_str());
+    }
+  }
+  for (size_t i = 0; i < cfgVs_.size(); ++i) {
+    const Eigen::MatrixXd& matrix = cfgVs_[i];
+    ROS_INFO("speed sequence cfgVs[%zu]: ", i);
+    for (int row = 0; row < matrix.rows(); ++row) {
+      std::stringstream ss;
+      for (int col = 0; col < matrix.cols(); ++col) {
+        ss << matrix(row, col);
+        if (col < matrix.cols() - 1) {
+          ss << ", ";
+        }
+      }
+      ROS_INFO("%s", ss.str().c_str());
+    }
+  }
   N_ = 2 * cfgHs_.size();
   // NOTE wonderful trick
   sum_T_ = tracking_dur_;
@@ -350,8 +387,6 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
   for (const auto& cfgV : cfgVs_) {
     dim_p_ += cfgV.cols() - 1;
   }
-  ROS_INFO("dim_t_: %d", dim_t_);
-  ROS_INFO("dim_p_: %d", dim_p_);
   p_.resize(dim_p_);
   t_.resize(dim_t_);
   x_ = new double[dim_p_ + dim_t_ + 1];
@@ -364,9 +399,9 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
   tracking_visible_ps_ = visible_ps;
   // 这是扇形区域的夹角
   tracking_thetas_ = thetas;
-  for (int i = 0; i < tracking_thetas_.size(); ++i) {
-    ROS_INFO("theta[%d] = %f", i, tracking_thetas_.at(i));
-  }
+  // for (int i = 0; i < tracking_thetas_.size(); ++i) {
+  //   ROS_INFO("theta[%d] = %f", i, tracking_thetas_.at(i));
+  // }
   // 设置约束
   setBoundConds(iniState, finState);
   x_[dim_p_ + dim_t_] = 0.1;
@@ -379,8 +414,10 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
   forwardT(t_, sumT, T);
   forwardP(p_, cfgVs_, P);
   jerkOpt_.generate(P, T);
-  // std::cout << "P: \n" << P << std::endl;
-  // std::cout << "T: " << T.transpose() << std::endl;
+  ROS_INFO("PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP");
+  std::cout << "P: \n" << P << std::endl;
+  ROS_INFO("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT");
+  std::cout << "T: " << T.transpose() << std::endl;
   // 所有的轨迹都是从这个点拿出来的jerkOpt_
   traj = jerkOpt_.getTraj();
   delete[] x_;
@@ -412,10 +449,11 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
   for (const auto& cfgV : cfgVs_) {
     dim_p_ += cfgV.cols() - 1;
   }
-  // std::cout << "dim_p_: " << dim_p_ << std::endl;
+  ROS_INFO("dim_p = %f", dim_p_);
   p_.resize(dim_p_);
   t_.resize(dim_t_);
   x_ = new double[dim_p_ + dim_t_ + 1];
+  ROS_INFO("x_ = %f", x_);
   Eigen::VectorXd T(N_);
   Eigen::MatrixXd P(3, N_ - 1);
 
@@ -724,7 +762,8 @@ bool TrajOpt::grad_cost_visibility(const Eigen::Vector3d& p,
   double theta_less =
       theta - theta_clearance_ > 0 ? theta - theta_clearance_ : 0;
   double cosTheta = cos(theta_less);
-  // 这个是为了计算两个点的余弦值的差值，后面的inner_product / norm_a / norm_b是点集
+  // 这个是为了计算两个点的余弦值的差值，后面的inner_product / norm_a /
+  // norm_b是点集
   double pen = cosTheta - inner_product / norm_a / norm_b;
   if (pen > 0) {
     double grad = 0;
@@ -735,6 +774,7 @@ bool TrajOpt::grad_cost_visibility(const Eigen::Vector3d& p,
     // gradp = grad * (norm_b * cosTheta / norm_a * a - b);
     gradp *= rhosVisibility_;
     costp *= rhosVisibility_;
+    ROS_INFO("pen > 0");
     return true;
   } else {
     return false;

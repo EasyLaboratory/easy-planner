@@ -45,13 +45,15 @@ void predict_state_callback(const ros::TimerEvent& event) {
   target_odom.twist.twist.linear.z = ekfPtr_->vel().z();
   Eigen::Vector3d rpy = ekfPtr_->rpy();
   Eigen::Quaterniond q = euler2quaternion(rpy);
-  ROS_INFO("through kalam target postion (x,y,z) = (%f,%f,%f)", ekfPtr_->pos().x(), ekfPtr_->pos().y(),
-           ekfPtr_->pos().z());
-  ROS_INFO("through kalam target vel (vx, vy, vz) = (%f,%f,%f)", ekfPtr_->vel().x(), ekfPtr_->vel().y(),
-           ekfPtr_->vel().z());
-  ROS_INFO("through kalam target vel = %f", ekfPtr_->vel().norm());
-  ROS_INFO("through kalam target rpy (roll, pitch, yaw) = (%f,%f,%f)", rpy.x(), rpy.y(),
+  ROS_INFO("through kalam target (x,y,z) = (%f, %f, %f), (vx, vy, vz) = (%f, %f, %f), (roll, pitch, yaw) = (%f, %f, %f)", ekfPtr_->pos().x(), ekfPtr_->pos().y(),
+           ekfPtr_->pos().z(), ekfPtr_->vel().x(), ekfPtr_->vel().y(),
+           ekfPtr_->vel().z(), rpy.x(), rpy.y(),
            rpy.z());
+  // ROS_INFO("through kalam target vel (vx, vy, vz) = (%f,%f,%f)", ekfPtr_->vel().x(), ekfPtr_->vel().y(),
+  //          ekfPtr_->vel().z());
+  // ROS_INFO("through kalam target vel = %f", ekfPtr_->vel().norm());
+  // ROS_INFO("through kalam target rpy (roll, pitch, yaw) = (%f,%f,%f)", rpy.x(), rpy.y(),
+  //          rpy.z());
   target_odom.pose.pose.orientation.w = q.w();
   target_odom.pose.pose.orientation.x = q.x();
   target_odom.pose.pose.orientation.y = q.y();
@@ -86,13 +88,14 @@ void update_state_callback(const nav_msgs::OdometryConstPtr& target_msg,
   q.x() = target_msg->pose.pose.orientation.x;
   q.y() = target_msg->pose.pose.orientation.y;
   q.z() = target_msg->pose.pose.orientation.z;
-  ROS_INFO("origin target postion (x,y,z) = (%f,%f,%f)", p.x(), p.y(),
-           p.z());
   Eigen::Vector3d rpy = quaternion2euler(q);
-  ROS_INFO("origin target rpy (roll, pitch, yaw) = (%f,%f,%f)", rpy.x(), rpy.y(),
-           rpy.z());
-  ROS_INFO("origin target (vx, vy, vz )= (%f, %f, %f)"
-           , target_msg->twist.twist.linear.x, target_msg->twist.twist.linear.y, target_msg->twist.twist.linear.z);
+  ROS_INFO("origin target (x, y, z) = (%f, %f, %f), (roll, pitch, yaw) = (%f, %f, %f), (vx, vy, vz)= (%f, %f, %f)", p.x(), p.y(),
+           p.z(), rpy.x(), rpy.y(), rpy.z(),
+            target_msg->twist.twist.linear.x, target_msg->twist.twist.linear.y, target_msg->twist.twist.linear.z);
+  // ROS_INFO("origin target rpy (roll, pitch, yaw) = (%f,%f,%f)", rpy.x(), rpy.y(),
+  //          rpy.z());
+  // ROS_INFO("origin target (vx, vy, vz)= (%f, %f, %f)"
+  //          , target_msg->twist.twist.linear.x, target_msg->twist.twist.linear.y, target_msg->twist.twist.linear.z);
   // NOTE check whether it's in FOV
   // check_fov_ = false 这个函数没有进来
   if (check_fov_) {

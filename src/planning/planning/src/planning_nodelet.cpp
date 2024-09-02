@@ -196,11 +196,11 @@ class Nodelet : public nodelet::Nodelet {
     //   return;
     // }
     // 这个是卡尔曼滤波成功的标志
-    ROS_INFO("******target_received_ = %s", target_received_ ? "true" : "false");
+    ROS_INFO("target_received_ = %s", target_received_ ? "true" : "false");
     if (!target_received_) {
       return;
     }
-    ROS_INFO("******force_hover_ = %s", force_hover_ ? "true" : "false");
+    ROS_INFO("force_hover_ = %s", force_hover_ ? "true" : "false");
     // NOTE obtain state of target
     // 只要target是锁的状态就不动
     while (target_lock_.test_and_set());
@@ -220,7 +220,7 @@ class Nodelet : public nodelet::Nodelet {
     target_q.z() = replanStateMsg_.target.pose.pose.orientation.z;
 
     // NOTE force-hover: waiting for the speed of drone small enough
-    ROS_INFO("******odom_v.norm() = %f", odom_v.norm());
+    ROS_INFO("odom_v.norm() = %f", odom_v.norm());
     // if (force_hover_ && odom_v.norm() > 0.1) {
     //   return;
     // }
@@ -292,8 +292,9 @@ class Nodelet : public nodelet::Nodelet {
         prePtr_->predict(target_p, target_v, target_predcit);
     ros::Time t_stop = ros::Time::now();
     double cost_time = (t_stop - t_start).toSec() * 1e3;
-    ROS_INFO("******predict cost time: %f ms", cost_time);
-    ROS_INFO("******generate predict trajectory = %s", generate_new_traj_success ? "true" : "false");
+    ROS_INFO("predict cost time: %f ms", cost_time);
+    ROS_INFO("generate predict trajectory = %s",
+             generate_new_traj_success ? "true" : "false");
     // *********************生成目标物体预测轨迹的部分*********************
     if (generate_new_traj_success) {
       Eigen::Vector3d observable_p = target_predcit.back();
@@ -315,7 +316,8 @@ class Nodelet : public nodelet::Nodelet {
     double replan_t = (replan_stamp - replan_stamp_).toSec();
     if (force_hover_ || replan_t > traj_poly_.getTotalDuration()) {
       // 如果不正常状态的话就从上一帧规划的轨迹上拿参数
-      ROS_INFO("Ntraj_poly_.getTotalDuration() = %f", traj_poly_.getTotalDuration());
+      ROS_INFO("Ntraj_poly_.getTotalDuration() = %f",
+               traj_poly_.getTotalDuration());
       // should replan from the hover state
       iniState.col(0) = odom_p;
       iniState.col(1) = odom_v;
@@ -339,7 +341,7 @@ class Nodelet : public nodelet::Nodelet {
     for (int i = 0; i < iniState.rows(); ++i) {
       std::ostringstream oss;
       for (int j = 0; j < iniState.cols(); ++j) {
-        oss << iniState(i, j) << " ";
+        oss << iniState(i, j) << ", ";
       }
       ROS_INFO("%s", oss.str().c_str());
     }
@@ -373,7 +375,8 @@ class Nodelet : public nodelet::Nodelet {
       }
       // ros::Time t_end0 = ros::Time::now();
     }
-    ROS_INFO("******generate A* trajectory = %s", generate_new_traj_success ? "true" : "false");
+    ROS_INFO("generate A* trajectory = %s",
+             generate_new_traj_success ? "true" : "false");
     // *********************利用A*生成初始轨迹的部分*********************
 
     std::vector<Eigen::Vector3d> visible_ps;
@@ -426,8 +429,21 @@ class Nodelet : public nodelet::Nodelet {
 
       // ros::Time t_front3 = ros::Time::now();
       envPtr_->generateSFC(path, 2.0, hPolys, keyPts);
+      for (size_t i = 0; i < path.size(); ++i) {
+        const Eigen::Vector3d& vec = path[i];
+        ROS_INFO("A STAR path[%zu]: [%f, %f, %f]", i, vec.x(), vec.y(),
+                 vec.z());
+      }
       ROS_INFO("hPolys.size() = %lu", hPolys.size());
       ROS_INFO("keyPts.size() = %lu", keyPts.size());
+      for (size_t i = 0; i < keyPts.size(); ++i) {
+        const Eigen::Vector3d& first = keyPts[i].first;
+        const Eigen::Vector3d& second = keyPts[i].second;
+        ROS_INFO("keyPts[%zu] - First Vector: [%f, %f, %f]", i, first.x(),
+                 first.y(), first.z());
+        ROS_INFO("keyPts[%zu] - Second Vector: [%f, %f, %f]", i, second.x(),
+                 second.y(), second.z());
+      }
       // ros::Time t_end3 = ros::Time::now();
       // double t_corridor = (t_end3 - t_front3).toSec() * 1e3;
 
@@ -441,12 +457,13 @@ class Nodelet : public nodelet::Nodelet {
       finState.setZero(3, 3);
       // 末端状态
       finState.col(0) = path.back();
-      finState.col(1) = target_v;
+      // finState.col(1) = target_v;
+      finState.col(1) = -1.0 * target_v;
       ROS_INFO("Final State Matrix:");
       for (int i = 0; i < finState.rows(); ++i) {
         std::ostringstream oss;
         for (int j = 0; j < finState.cols(); ++j) {
-          oss << finState(i, j) << " ";
+          oss << finState(i, j) << ", ";
         }
         ROS_INFO("%s", oss.str().c_str());
       }
@@ -467,7 +484,8 @@ class Nodelet : public nodelet::Nodelet {
       ros::Time end_time = ros::Time::now();
       // 计算并输出执行时间
       ros::Duration execution_time = end_time - start_time;
-      ROS_INFO("plan_timer_callback execution time = %f s", execution_time.toSec());
+      ROS_INFO("plan_timer_callback execution time = %f s",
+               execution_time.toSec());
       // ros::Time t_end4 = ros::Time::now();
       // double t_optimization = (t_end4 - t_front4).toSec() * 1e3;
 
@@ -486,7 +504,8 @@ class Nodelet : public nodelet::Nodelet {
 
       visPtr_->visualize_traj(traj, "traj");
     }
-    ROS_INFO("******generate optimize trajectory = %s", generate_new_traj_success ? "true" : "false");
+    ROS_INFO("generate optimize trajectory = %s",
+             generate_new_traj_success ? "true" : "false");
     // NOTE collision check
     bool valid = false;
     if (generate_new_traj_success) {
