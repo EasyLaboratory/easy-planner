@@ -414,10 +414,10 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
   forwardT(t_, sumT, T);
   forwardP(p_, cfgVs_, P);
   jerkOpt_.generate(P, T);
-  ROS_INFO("PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP");
-  std::cout << "P: \n" << P << std::endl;
-  ROS_INFO("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT");
-  std::cout << "T: " << T.transpose() << std::endl;
+  // ROS_INFO("PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP");
+  // std::cout << "P: \n" << P << std::endl;
+  // ROS_INFO("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT");
+  // std::cout << "T: " << T.transpose() << std::endl;
   // 所有的轨迹都是从这个点拿出来的jerkOpt_
   traj = jerkOpt_.getTraj();
   delete[] x_;
