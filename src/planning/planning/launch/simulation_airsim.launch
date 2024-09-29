@@ -18,9 +18,10 @@
       <rosparam command="load" file="$(find target_ekf)/config/camera.yaml" />
       <!-- 这个值没有被用到 -->
       <param name="pitch_thr" value="37"/>
-      <!-- <remap from="~yolo" to="/target/odom_airsim"/> -->
+      <!-- 这个是相机得到的数据 -->
+      <remap from="~yolo" to="/target/odom_airsim"/>
       <!-- 这个是真值 -->
-      <remap from="~yolo" to="/easysim_ros_wrapper/player_odom"/>
+      <!-- <remap from="~yolo" to="/easysim_ros_wrapper/player_odom"/> -->
     <!-- 往出去发的 -->
       <remap from="~odom" to="odom"/>
       <remap from="~target_odom" to="/target_ekf_odom"/>
