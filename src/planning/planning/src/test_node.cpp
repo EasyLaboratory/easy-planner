@@ -32,8 +32,7 @@ void gridmap_callback(const quadrotor_msgs::OccMap3dConstPtr &msgPtr) {
   map_received_ = true;
 }
 
-void testCallback(const ros::TimerEvent &e) {
-}
+void testCallback(const ros::TimerEvent &e) {}
 
 void triger_callback(const geometry_msgs::PoseStampedConstPtr &msgPtr) {
   target_p_ << msgPtr->pose.position.x, msgPtr->pose.position.y, 1.0;
@@ -58,7 +57,8 @@ int main(int argc, char **argv) {
 
   ros::Timer test_timer = nh.createTimer(ros::Duration(0.3), testCallback);
   ros::Subscriber gridmap_sub_ = nh.subscribe<quadrotor_msgs::OccMap3d>(
-      "gridmap_inflate", 1, &gridmap_callback, ros::TransportHints().tcpNoDelay());
+      "gridmap_inflate", 1, &gridmap_callback,
+      ros::TransportHints().tcpNoDelay());
   ros::Subscriber triger_sub_ = nh.subscribe<geometry_msgs::PoseStamped>(
       "triger", 10, &triger_callback, ros::TransportHints().tcpNoDelay());
 

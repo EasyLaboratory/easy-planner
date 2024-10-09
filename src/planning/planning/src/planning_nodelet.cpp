@@ -11,7 +11,6 @@
 #include <traj_opt/traj_opt.h>
 
 #include <Eigen/Core>
-#include <atomic>
 #include <env/env.hpp>
 #include <prediction/prediction.hpp>
 #include <thread>
@@ -158,7 +157,6 @@ class Nodelet : public nodelet::Nodelet {
   }
 
   void gridmap_callback(const quadrotor_msgs::OccMap3dConstPtr& msgPtr) {
-    // std::cout << "gridmap_callback " << std::endl;
     while (gridmap_lock_.test_and_set());
     map_msg_ = *msgPtr;
     map_received_ = true;
