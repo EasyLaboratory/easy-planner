@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   nodelet
   decomp_ros_utils
+  kinematic
 )
 
 catkin_package(

@@ -1,7 +1,7 @@
 #include "data_frame.hpp"
 #include "math.h"
 
-namespace Planning {
+namespace Kinematic {
 class Control {
  public:
   Control() {}
@@ -30,4 +30,4 @@ class Control {
   double k1_ = 1.0;
   double k2_ = 1.0;
 };
-}  // namespace Planning
+}  // namespace Kinematic

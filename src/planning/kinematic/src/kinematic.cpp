@@ -3,7 +3,7 @@
 #include <iostream>
 // using namespace std;
 
-namespace Planning {
+namespace Kinematic {
 double Control::calDistance(const Position& ego_Position,
                             const Position& target_Position) {
   return std::hypot(ego_Position.x - target_Position.x,
@@ -75,4 +75,4 @@ void Control::KinematicControl() {
   updateState();
 }
 
-}  // namespace Planning
+}  // namespace Kinematic
