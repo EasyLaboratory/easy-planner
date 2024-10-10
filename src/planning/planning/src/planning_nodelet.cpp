@@ -61,6 +61,7 @@ class Nodelet : public nodelet::Nodelet {
   int traj_id_ = 0;
   bool wait_hover_ = true;
   bool force_hover_ = true;
+  double ego_yaw_last_ = 0.0;
 
   nav_msgs::Odometry odom_msg_, target_msg_;
   quadrotor_msgs::OccMap3d map_msg_;
@@ -185,11 +186,13 @@ class Nodelet : public nodelet::Nodelet {
     Eigen::Vector3d odom_p(odom_msg.pose.pose.position.x,
                            odom_msg.pose.pose.position.y,
                            odom_msg.pose.pose.position.z);
-    ROS_INFO("in planning odom (x,y,z) = (%f,%f,%f)", odom_p.x(), odom_p.y(),
-             odom_p.z());
+    ROS_INFO("in planning odom_p (x, y, z) = (%f,%f,%f)", odom_p.x(),
+             odom_p.y(), odom_p.z());
     Eigen::Vector3d odom_v(odom_msg.twist.twist.linear.x,
                            odom_msg.twist.twist.linear.y,
                            odom_msg.twist.twist.linear.z);
+    ROS_INFO("in planning odom_v (vx, vy, vz) = (%f,%f,%f)", odom_v.x(),
+             odom_v.y(), odom_v.z());
     Eigen::Quaterniond odom_q(
         odom_msg.pose.pose.orientation.w, odom_msg.pose.pose.orientation.x,
         odom_msg.pose.pose.orientation.y, odom_msg.pose.pose.orientation.z);
@@ -222,51 +225,31 @@ class Nodelet : public nodelet::Nodelet {
     // if (force_hover_ && odom_v.norm() > 0.1) {
     //   return;
     // }
-    // NOTE just for landing on the car!
-    // 这段是着陆使用的，目前没有被用到
-    if (land_triger_received_) {
-      if (std::fabs((target_p - odom_p).norm() < 0.1 && odom_v.norm() < 0.1 &&
-                    target_v.norm() < 0.2)) {
-        if (!wait_hover_) {
-          pub_hover_p(odom_p, ros::Time::now());
-          wait_hover_ = true;
-        }
-        ROS_WARN("[planner] HOVERING...");
-        return;
-      }
-      // TODO get the orientation fo target and calculate the pose of landing
-      // point
-      target_p = target_p + target_q * land_p_;
-      wait_hover_ = false;
-    } else {
-      // todo 0812 定高飞行，记得修改，原来是1.0
-      target_p.z() += relative_height_;
-      // NOTE determin whether to replan
-      // 计算当前位置和目标位置之间的差
-      Eigen::Vector3d dp = target_p - odom_p;
-      // TODO FXJ 在实际的飞机上需要修改!!!!
-      double desired_yaw = std::atan2(dp.y(), dp.x()) - M_PI / 2.0;
-      ROS_INFO("desired_yaw = %f", desired_yaw);
-      Eigen::Vector3d project_yaw =
-          odom_q.toRotationMatrix().col(0);  // NOTE ZYX
-      double now_yaw = std::atan2(project_yaw.y(), project_yaw.x());
+    // todo 0812 定高飞行，记得修改，原来是1.0
+    target_p.z() += relative_height_;
+    // NOTE determin whether to replan
+    // 计算当前位置和目标位置之间的差
+    Eigen::Vector3d dp = target_p - odom_p;
+    // TODO FXJ 在实际的飞机上需要修改!!!!
+    double desired_yaw = std::atan2(dp.y(), dp.x()) - M_PI / 2.0;
+    ROS_INFO("desired_yaw = %f", desired_yaw);
+    Eigen::Vector3d project_yaw = odom_q.toRotationMatrix().col(0);  // NOTE ZYX
 
-      ROS_INFO("now_yaw = %f", now_yaw);
-      if (std::fabs((target_p - odom_p).norm() - tracking_dist_) <
-              tolerance_d_ &&
-          odom_v.norm() < 0.1 && target_v.norm() < 0.2 &&
-          std::fabs(desired_yaw - now_yaw) < 0.5) {
-        if (!wait_hover_) {
-          pub_hover_p(odom_p, ros::Time::now());
-          wait_hover_ = true;
-        }
-        ROS_WARN("[planner] HOVERING...");
-        replanStateMsg_.state = -1;
-        replanState_pub_.publish(replanStateMsg_);
-        return;
-      } else {
-        wait_hover_ = false;
+    double now_yaw = std::atan2(project_yaw.y(), project_yaw.x());
+    ROS_INFO("now_yaw = %f", now_yaw);
+    if (std::fabs((target_p - odom_p).norm() - tracking_dist_) < tolerance_d_ &&
+        odom_v.norm() < 0.1 && target_v.norm() < 0.2 &&
+        std::fabs(desired_yaw - now_yaw) < 0.5) {
+      if (!wait_hover_) {
+        pub_hover_p(odom_p, ros::Time::now());
+        wait_hover_ = true;
       }
+      ROS_WARN("[planner] HOVERING...");
+      replanStateMsg_.state = -1;
+      replanState_pub_.publish(replanStateMsg_);
+      return;
+    } else {
+      wait_hover_ = false;
     }
 
     // NOTE obtain map
@@ -314,8 +297,6 @@ class Nodelet : public nodelet::Nodelet {
     double replan_t = (replan_stamp - replan_stamp_).toSec();
     if (force_hover_ || replan_t > traj_poly_.getTotalDuration()) {
       // 如果不正常状态的话就从上一帧规划的轨迹上拿参数
-      ROS_INFO("Ntraj_poly_.getTotalDuration() = %f",
-               traj_poly_.getTotalDuration());
       // should replan from the hover state
       iniState.col(0) = odom_p;
       iniState.col(1) = odom_v;
@@ -331,6 +312,14 @@ class Nodelet : public nodelet::Nodelet {
     replanStateMsg_.iniState.resize(9);
     Eigen::Map<Eigen::MatrixXd>(replanStateMsg_.iniState.data(), 3, 3) =
         iniState;
+
+    double omega = (now_yaw - ego_yaw_last_) / 20;
+    Position start_pos(odom_p.x(), odom_p.y(), odom_p.z());
+    Vel start_vel(odom_v.x(), odom_v.y(), odom_v.z());
+    State start_state(start_pos, start_vel, now_yaw, omega);
+    controller_.setStartState(start_state);
+    // 记录下上一个角,用于角速度计算。
+    ego_yaw_last_ = now_yaw;
     // *********************设置初始状态的部分*********************
 
     // *********************利用A*生成初始轨迹的部分*********************
