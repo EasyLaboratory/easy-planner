@@ -61,7 +61,6 @@ class Nodelet : public nodelet::Nodelet {
   int traj_id_ = 0;
   bool wait_hover_ = true;
   bool force_hover_ = true;
-  double ego_yaw_last_ = 0.0;
 
   nav_msgs::Odometry odom_msg_, target_msg_;
   quadrotor_msgs::OccMap3d map_msg_;
@@ -186,11 +185,16 @@ class Nodelet : public nodelet::Nodelet {
     Eigen::Vector3d odom_p(odom_msg.pose.pose.position.x,
                            odom_msg.pose.pose.position.y,
                            odom_msg.pose.pose.position.z);
-    ROS_INFO("in planning odom_p (x, y, z) = (%f,%f,%f)", odom_p.x(),
-             odom_p.y(), odom_p.z());
     Eigen::Vector3d odom_v(odom_msg.twist.twist.linear.x,
                            odom_msg.twist.twist.linear.y,
                            odom_msg.twist.twist.linear.z);
+    Eigen::Vector3d odom_omega(odom_msg.twist.twist.angular.x,
+                               odom_msg.twist.twist.angular.y,
+                               odom_msg.twist.twist.angular.z);
+    ROS_INFO("in planning odom_omega (wx, wy, wz) = (%f,%f,%f)", odom_omega.x(),
+             odom_omega.y(), odom_omega.z());
+    ROS_INFO("in planning odom_p (x, y, z) = (%f,%f,%f)", odom_p.x(),
+             odom_p.y(), odom_p.z());
     ROS_INFO("in planning odom_v (vx, vy, vz) = (%f,%f,%f)", odom_v.x(),
              odom_v.y(), odom_v.z());
     Eigen::Quaterniond odom_q(
@@ -276,6 +280,11 @@ class Nodelet : public nodelet::Nodelet {
     ROS_INFO("predict cost time: %f ms", cost_time);
     ROS_INFO("generate predict trajectory = %s",
              generate_new_traj_success ? "true" : "false");
+
+    State target_state;
+    Position target_pos(target_p.x(), target_p.y(), target_p.z());
+    target_state.setPos(target_pos);
+    controller_.setTargetState(target_state);
     // *********************生成目标物体预测轨迹的部分*********************
     if (generate_new_traj_success) {
       Eigen::Vector3d observable_p = target_predcit.back();
@@ -313,15 +322,23 @@ class Nodelet : public nodelet::Nodelet {
     Eigen::Map<Eigen::MatrixXd>(replanStateMsg_.iniState.data(), 3, 3) =
         iniState;
 
-    double omega = (now_yaw - ego_yaw_last_) / 20;
     Position start_pos(odom_p.x(), odom_p.y(), odom_p.z());
     Vel start_vel(odom_v.x(), odom_v.y(), odom_v.z());
-    State start_state(start_pos, start_vel, now_yaw, omega);
+    State start_state(start_pos, start_vel, now_yaw, odom_omega.z());
     controller_.setStartState(start_state);
-    // 记录下上一个角,用于角速度计算。
-    ego_yaw_last_ = now_yaw;
+    ROS_INFO("init state, (x, y, z) = (%f,%f,%f)", odom_p.x(), odom_p.y(),
+             odom_p.z());
+    ROS_INFO("init state (vx, vy, vz) = (%f,%f,%f)", odom_v.x(), odom_v.y(),
+             odom_v.z());
+    ROS_INFO("init state now_yaw= %f", now_yaw);
+    ROS_INFO("init state odom_omega.z()= %f", odom_omega.z());
     // *********************设置初始状态的部分*********************
-
+    // *********************kinematic控制的部分*********************
+    bool generate_new_point_success = false;
+    if (generate_new_traj_success) {
+      generate_new_point_success = controller_.Kinematic();
+    }
+    // *********************kinematic控制的部分*********************
     // *********************利用A*生成初始轨迹的部分*********************
     Eigen::Vector3d p_start = iniState.col(0);
     ROS_INFO("Initial State Matrix:");
@@ -501,6 +518,10 @@ class Nodelet : public nodelet::Nodelet {
       replanStateMsg_.state = -2;
       replanState_pub_.publish(replanStateMsg_);
     }
+    if (generate_new_point_success) {
+      pub_traj(traj, yaw, replan_stamp);
+    }
+    // if (valid)
     if (valid) {
       force_hover_ = false;
       ROS_WARN("[planner] REPLAN SUCCESS");
@@ -564,6 +585,11 @@ class Nodelet : public nodelet::Nodelet {
     Eigen::Vector3d odom_v(odom_msg.twist.twist.linear.x,
                            odom_msg.twist.twist.linear.y,
                            odom_msg.twist.twist.linear.z);
+    Eigen::Vector3d odom_omega(odom_msg.twist.twist.angular.x,
+                               odom_msg.twist.twist.angular.y,
+                               odom_msg.twist.twist.angular.z);
+    ROS_INFO("in planning odom_omega (wx, wy, wz) = (%f,%f,%f)", odom_omega.x(),
+             odom_omega.y(), odom_omega.z());
     Eigen::Quaterniond odom_q(
         odom_msg.pose.pose.orientation.w, odom_msg.pose.pose.orientation.x,
         odom_msg.pose.pose.orientation.y, odom_msg.pose.pose.orientation.z);
@@ -1498,8 +1524,10 @@ class Nodelet : public nodelet::Nodelet {
       plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz),
                                    &Nodelet::airsim_fake_timer_callback, this);
     } else {
+      // plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz),
+      //                              &Nodelet::plan_timer_callback, this);
       plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz),
-                                   &Nodelet::plan_timer_callback, this);
+                                   &Nodelet::kinematic_control_callback, this);
     }
     gridmap_sub_ = nh.subscribe<quadrotor_msgs::OccMap3d>(
         "gridmap_inflate", 1, &Nodelet::gridmap_callback, this,

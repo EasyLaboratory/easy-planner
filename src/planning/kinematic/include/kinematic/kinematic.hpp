@@ -16,6 +16,7 @@ class Control {
   double dismin() { return dis_min_; }
   double dismax() { return dis_max_; }
   void KinematicControl();
+  bool Kinematic();
   void updateState();
   void setStartState(const State& start_state);
   void setTargetState(const State& target_state);
