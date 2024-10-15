@@ -1,5 +1,6 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <mapping/mapping.h>
+#include <mavros_msgs/PositionTarget.h>
 #include <nav_msgs/Odometry.h>
 #include <nodelet/nodelet.h>
 #include <quadrotor_msgs/OccMap3d.h>
@@ -18,7 +19,6 @@
 #include <wr_msg/wr_msg.hpp>
 
 #include "kinematic/kinematic.hpp"
-
 namespace planning {
 
 Eigen::IOFormat CommaInitFmt(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ",
@@ -31,7 +31,7 @@ class Nodelet : public nodelet::Nodelet {
       land_triger_sub_;
   ros::Timer plan_timer_;
 
-  ros::Publisher traj_pub_, heartbeat_pub_, replanState_pub_;
+  ros::Publisher traj_pub_, heartbeat_pub_, replanState_pub_, point_pub_;
 
   std::shared_ptr<mapping::OccGridMap> gridmapPtr_;
   std::shared_ptr<env::Env> envPtr_;
@@ -85,6 +85,44 @@ class Nodelet : public nodelet::Nodelet {
     traj_msg.traj_id = traj_id_++;
     traj_pub_.publish(traj_msg);
   }
+
+  inline void normalizeYaw(double* yaw) {
+    *yaw = fmod(*yaw, 2 * M_PI);
+    if (*yaw < 0) {
+      *yaw += 2 * M_PI;
+    }
+  }
+
+  void pub_point(const Eigen::Vector3d& pos, const Eigen::Vector3d& vel,
+                 double& yaw) {
+    mavros_msgs::PositionTarget point;
+    point.coordinate_frame = mavros_msgs::PositionTarget::FRAME_LOCAL_NED;
+    point.type_mask = mavros_msgs::PositionTarget::IGNORE_AFX |
+                      mavros_msgs::PositionTarget::IGNORE_AFY |
+                      mavros_msgs::PositionTarget::IGNORE_AFZ |
+                      mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
+    point.position.x = pos.x();
+    point.position.y = pos.y();
+    point.position.z = pos.z();
+    point.velocity.x = vel.x();
+    point.velocity.y = vel.y();
+    point.velocity.z = vel.z();
+    normalizeYaw(&yaw);  // Normalize yaw
+    // 这个到时候看看要不要加不加
+    point.yaw = yaw - M_PI / 2.0;
+    ROS_INFO(
+        "kinematic to airsim point (x, y, z) = (%f, %f, %f), (vx, vy, vz) = "
+        "(%f, %f, "
+        "%f), "
+        "yaw = %f)",
+        point.position.x, point.position.y, point.position.z, point.velocity.x,
+        point.velocity.y, point.velocity.z, point.yaw);
+    // ROS_INFO("TO airsim yaw = %f", point.yaw);
+    // ROS_INFO("TO airsim point (vx, vy, vz) = (%f, %f, %f)", point.velocity.x,
+    //          point.velocity.y, point.velocity.z);
+    point_pub_.publish(point);
+  }
+
   void pub_traj(const Trajectory& traj, const double& yaw,
                 const ros::Time& stamp) {
     quadrotor_msgs::PolyTraj traj_msg;
@@ -519,7 +557,19 @@ class Nodelet : public nodelet::Nodelet {
       replanState_pub_.publish(replanStateMsg_);
     }
     if (generate_new_point_success) {
-      pub_traj(traj, yaw, replan_stamp);
+      Eigen::Vector3d pos(controller_.egoState().pos().x,
+                          controller_.egoState().pos().y,
+                          controller_.egoState().pos().z);
+      Eigen::Vector3d vel(controller_.egoState().vel().vx,
+                          controller_.egoState().vel().vy,
+                          controller_.egoState().vel().vz);
+      double yaw = controller_.egoState().yaw();
+      ROS_INFO("kinematic control (x,y,z) = (%f,%f,%f)", pos.x(), pos.y(),
+               pos.z());
+      ROS_INFO("kinematic control (x,y,z) = (%f,%f,%f)", vel.x(), vel.y(),
+               vel.z());
+      ROS_INFO("kinematic control yaw = %f ", yaw);
+      pub_point(pos, vel, yaw);
     }
     // if (valid)
     if (valid) {
@@ -1507,9 +1557,10 @@ class Nodelet : public nodelet::Nodelet {
 
     heartbeat_pub_ = nh.advertise<std_msgs::Empty>("heartbeat", 10);
     traj_pub_ = nh.advertise<quadrotor_msgs::PolyTraj>("trajectory", 1);
+    point_pub_ =
+        nh.advertise<mavros_msgs::PositionTarget>("/command/trajectory", 50);
     replanState_pub_ =
         nh.advertise<quadrotor_msgs::ReplanState>("replanState", 1);
-
     if (debug_) {
       plan_timer_ = nh.createTimer(ros::Duration(1.0 / plan_hz),
                                    &Nodelet::debug_timer_callback, this);
