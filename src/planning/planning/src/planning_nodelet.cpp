@@ -101,9 +101,11 @@ class Nodelet : public nodelet::Nodelet {
                       mavros_msgs::PositionTarget::IGNORE_AFY |
                       mavros_msgs::PositionTarget::IGNORE_AFZ |
                       mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
+
     point.position.x = pos.x();
     point.position.y = pos.y();
     point.position.z = pos.z();
+
     point.velocity.x = vel.x();
     point.velocity.y = vel.y();
     point.velocity.z = vel.z();
@@ -320,7 +322,8 @@ class Nodelet : public nodelet::Nodelet {
              generate_new_traj_success ? "true" : "false");
 
     State target_state;
-    Position target_pos(target_p.x(), target_p.y(), target_p.z());
+    Position target_pos(target_p.x(), target_p.y(),
+                        target_p.z() += relative_height_);
     target_state.setPos(target_pos);
     controller_.setTargetState(target_state);
     // *********************生成目标物体预测轨迹的部分*********************
@@ -566,7 +569,7 @@ class Nodelet : public nodelet::Nodelet {
       double yaw = controller_.egoState().yaw();
       ROS_INFO("kinematic control (x,y,z) = (%f,%f,%f)", pos.x(), pos.y(),
                pos.z());
-      ROS_INFO("kinematic control (x,y,z) = (%f,%f,%f)", vel.x(), vel.y(),
+      ROS_INFO("kinematic control (vx, vy, vz) = (%f,%f,%f)", vel.x(), vel.y(),
                vel.z());
       ROS_INFO("kinematic control yaw = %f ", yaw);
       pub_point(pos, vel, yaw);
