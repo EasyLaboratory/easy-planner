@@ -8,6 +8,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
+  quadrotor_msgs
 )
 
 find_package(OpenCV REQUIRED)

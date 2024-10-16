@@ -22,6 +22,11 @@ void Control::normalizeAngle(double* yaw) {
 
 void Control::setStartState(const State& start_state) {
   ego_state_ = start_state;
+  Position pos;
+  pos.x = start_state.pos().x;
+  pos.y = start_state.pos().y;
+  pos.z = 10.0;
+  ego_state_.setPos(pos);
 }
 
 void Control::setTargetState(const State& target_state) {
@@ -86,16 +91,37 @@ bool Control::Kinematic() {
 
   double vx = k1_ * epsilon_distance * std::cos(epsilon_yaw) +
               ego_state_.vel().vx * std::cos(target_yaw - epsilon_yaw);
-
+  if (vx > vmax_) {
+    vx = vmax_;
+  }
+  if (vx < vmax_ * (-1.0)) {
+    vx = -1 * vmax_;
+  }
   double vy = k1_ * epsilon_distance * std::sin(epsilon_yaw) +
               ego_state_.vel().vy * std::cos(target_yaw - epsilon_yaw);
+  if (vy > vmax_) {
+    vy = vmax_;
+  }
+  if (vx < vmax_ * (-1.0)) {
+    vy = -1 * vmax_;
+  }
 
   Vel vel(vx, vy, 0.0);
   ego_state_.setVel(vel);
+  // normalizeAngle(&target_yaw);
+  // ego_state_.setYaw(target_yaw);
   double omega = k2_ * epsilon_yaw + std::sqrt(vx * vx + vy * vy) /
                                          epsilon_distance *
                                          std::sin(target_yaw - epsilon_yaw);
+  if (omega > omegamax_) {
+    omega = omegamax_;
+  }
+  if (omega < omegamax_ * (-1.0)) {
+    omega = -1 * omegamax_;
+  }
+
   // std::cout << "omega = " << omega << std::endl;
+  // 这个是按照理想更新的方式去做的。
   // updateState();
   return true;
 }

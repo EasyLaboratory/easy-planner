@@ -30,5 +30,7 @@ class Control {
   State target_state_;
   double k1_ = 1.0;
   double k2_ = 1.0;
+  double vmax_ = 5.0;
+  double omegamax_ = 1.5;
 };
 }  // namespace Kinematic
