@@ -84,10 +84,12 @@ void Control::KinematicControl() {
 bool Control::Kinematic() {
   double epsilon_distance = calDistance(ego_state_.pos(), target_state_.pos());
 
+  // 和目标位置计算得到的当前角度值
   double epsilon_yaw = std::atan2(-ego_state_.pos().y + target_state_.pos().y,
                                   -ego_state_.pos().x + target_state_.pos().x);
-
-  double target_yaw = std::atan2(ego_state_.vel().vx, target_state_.vel().vy);
+  // 目标物体的角度值
+  double target_yaw =
+      std::atan2(target_state_.vel().vy, target_state_.vel().vx);
 
   double vx = k1_ * epsilon_distance * std::cos(epsilon_yaw) +
               ego_state_.vel().vx * std::cos(target_yaw - epsilon_yaw);
