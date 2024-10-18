@@ -51,7 +51,7 @@ class Nodelet : public nodelet::Nodelet {
   // NOTE just for debug
   bool debug_ = false;
   quadrotor_msgs::ReplanState replanStateMsg_;
-  ros::Publisher gridmap_pub_, inflate_gridmap_pub_;
+  ros::Publisher gridmap_pub_, inflate_gridmap_pub_, marker_pub_;
   quadrotor_msgs::OccMap3d occmap_msg_;
 
   double tracking_dur_, tracking_dist_, tolerance_d_;
@@ -103,7 +103,6 @@ class Nodelet : public nodelet::Nodelet {
                       mavros_msgs::PositionTarget::IGNORE_AFY |
                       mavros_msgs::PositionTarget::IGNORE_AFZ |
                       mavros_msgs::PositionTarget::IGNORE_YAW_RATE;
-
     point.position.x = pos.x();
     point.position.y = pos.y();
     point.position.z = pos.z();
@@ -134,6 +133,35 @@ class Nodelet : public nodelet::Nodelet {
     kinematic_data.yaw = yaw;
     kinematic_data.omega = omega;
     kinematic_control_pub_.publish(kinematic_data);
+
+    // 现在我们在 RViz 中用 Marker 来绘制点
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "world";  // 根据你的坐标系设置合适的 frame
+    marker.header.stamp = ros::Time::now();
+    marker.ns = "kinematic_point";
+    marker.id = 0;  // ID 可以根据需要设置唯一标识
+    marker.type = visualization_msgs::Marker::SPHERE;  // 使用球体表示点
+    marker.action = visualization_msgs::Marker::ADD;
+
+    // 设置位置
+    marker.pose.position.x = pos.x();
+    marker.pose.position.y = pos.y();
+    marker.pose.position.z = pos.z();
+    marker.pose.orientation.w = 1.0;  // 标准姿态
+
+    // 设置 Marker 的大小
+    marker.scale.x = 5;  // 半径
+    marker.scale.y = 5;
+    marker.scale.z = 5;
+
+    // 设置颜色
+    marker.color.r = 0.0f;
+    marker.color.g = 1.0f;
+    marker.color.b = 0.0f;
+    marker.color.a = 1.0;  // 透明度为 1.0 表示完全不透明
+
+    // 发布 Marker
+    marker_pub_.publish(marker);
   }
 
   void pub_traj(const Trajectory& traj, const double& yaw,
@@ -333,8 +361,7 @@ class Nodelet : public nodelet::Nodelet {
              generate_new_traj_success ? "true" : "false");
 
     State target_state;
-    Position target_pos(target_p.x(), target_p.y(),
-                        target_p.z() += relative_height_);
+    Position target_pos(target_p.x(), target_p.y(), controller_.flyingHeight());
     target_state.setPos(target_pos);
     controller_.setTargetState(target_state);
     // *********************生成目标物体预测轨迹的部分*********************
@@ -571,14 +598,14 @@ class Nodelet : public nodelet::Nodelet {
       replanState_pub_.publish(replanStateMsg_);
     }
     if (generate_new_point_success) {
-      Eigen::Vector3d pos(controller_.egoState().pos().x,
-                          controller_.egoState().pos().y,
-                          controller_.egoState().pos().z);
-      Eigen::Vector3d vel(controller_.egoState().vel().vx,
-                          controller_.egoState().vel().vy,
-                          controller_.egoState().vel().vz);
-      double yaw = controller_.egoState().yaw();
-      double omega = controller_.egoState().omega();
+      Eigen::Vector3d pos(controller_.egoTargetState().pos().x,
+                          controller_.egoTargetState().pos().y,
+                          controller_.egoTargetState().pos().z);
+      Eigen::Vector3d vel(controller_.egoTargetState().vel().vx,
+                          controller_.egoTargetState().vel().vy,
+                          controller_.egoTargetState().vel().vz);
+      double yaw = controller_.egoTargetState().yaw();
+      double omega = controller_.egoTargetState().omega();
       ROS_INFO("kinematic control (x,y,z) = (%f,%f,%f)", pos.x(), pos.y(),
                pos.z());
       ROS_INFO("kinematic control (vx, vy, vz) = (%f,%f,%f)", vel.x(), vel.y(),
@@ -1575,6 +1602,8 @@ class Nodelet : public nodelet::Nodelet {
     traj_pub_ = nh.advertise<quadrotor_msgs::PolyTraj>("trajectory", 1);
     point_pub_ =
         nh.advertise<mavros_msgs::PositionTarget>("/command/trajectory", 50);
+    marker_pub_ =
+        nh.advertise<visualization_msgs::Marker>("visualization_marker", 1);
     kinematic_control_pub_ =
         nh.advertise<quadrotor_msgs::Kinematic>("kinematic_data", 1);
     replanState_pub_ =

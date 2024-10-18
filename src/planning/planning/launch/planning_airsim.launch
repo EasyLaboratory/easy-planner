@@ -19,7 +19,7 @@
     <remap from="~land_triger" to="/land_triger"/>
 
     <!-- 规划刷新率是0.05s -->
-    <param name="plan_hz" value="20"/>
+    <param name="plan_hz" value="50"/>
 
     <!-- 这个K是有几段轨迹 -->
     <param name="K" value="8"/>
