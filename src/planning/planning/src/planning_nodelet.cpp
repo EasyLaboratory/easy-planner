@@ -133,25 +133,37 @@ class Nodelet : public nodelet::Nodelet {
     kinematic_data.omega = omega;
     kinematic_control_pub_.publish(kinematic_data);
 
-    // 现在我们在 RViz 中用 Marker 来绘制点
+    // 现在我们在RViz中用Marker来绘制点
     visualization_msgs::Marker marker;
-    marker.header.frame_id = "world";  // 根据你的坐标系设置合适的 frame
+    marker.header.frame_id = "world";
     marker.header.stamp = ros::Time::now();
-    marker.ns = "kinematic_point";
-    marker.id = 0;  // ID 可以根据需要设置唯一标识
-    marker.type = visualization_msgs::Marker::SPHERE;  // 使用球体表示点
+    marker.ns = "kinematic_arrow";
+    marker.id = 0;
+    // 使用箭头
+    marker.type = visualization_msgs::Marker::ARROW;
     marker.action = visualization_msgs::Marker::ADD;
 
-    // 设置位置
-    marker.pose.position.x = pos.x();
-    marker.pose.position.y = pos.y();
-    marker.pose.position.z = pos.z();
-    marker.pose.orientation.w = 1.0;  // 标准姿态
+    geometry_msgs::Vector3 dir;
+    dir.x = std::cos(yaw);
+    dir.y = std::sin(yaw);
+    dir.z = 0.0;  // 假设箭头在 XY 平面上
+
+    geometry_msgs::Point start, end;
+    start.x = pos.x();  // 起点位置，和球体时相同
+    start.y = pos.y();
+    start.z = pos.z();
+    end.x = pos.x() + dir.x;  // 箭头方向，可以根据你的需求进行修改
+    end.y = pos.y() + dir.y;
+    end.z = pos.z() + dir.z;
+
+    // 设置 Marker 的点
+    marker.points.push_back(start);
+    marker.points.push_back(end);
 
     // 设置 Marker 的大小
-    marker.scale.x = 2;  // 半径
-    marker.scale.y = 2;
-    marker.scale.z = 2;
+    marker.scale.x = 0.05;  // 箭头杆的直径
+    marker.scale.y = 0.1;   // 箭头的宽度
+    marker.scale.z = 0.1;   // 箭头的高度
 
     // 设置颜色
     marker.color.r = 0.0f;
