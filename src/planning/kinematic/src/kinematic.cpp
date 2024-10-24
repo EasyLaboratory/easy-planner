@@ -1,5 +1,7 @@
 #include "kinematic/kinematic.hpp"
 
+#include <ros/ros.h>
+
 #include <iostream>
 // using namespace std;
 
@@ -52,10 +54,6 @@ void Control::updateState() {
   ego_state_.setPos(Position(ego_state_.pos().x + ego_state_.vel().vx * dt_,
                              ego_state_.pos().y + ego_state_.vel().vy * dt_,
                              ego_state_.pos().y));
-  // std::cout << "ego_state_.vel().vx = " << ego_state_.vel().vx
-  //           << ", ego_state_.vel().vy =" << ego_state_.vel().vy << std::endl;
-  // std::cout << "ego_state_.pos().x = " << ego_state_.pos().x
-  //           << ", ego_state_.pos().y =" << ego_state_.pos().y << std::endl;
   ego_state_.setYaw(ego_state_.yaw() + ego_state_.omega() * dt_);
 }
 
@@ -135,9 +133,11 @@ bool Control::Kinematic() {
   } else {
     Ed_ = 0.0;
   }
+  ROS_INFO("Ed_max = %f", Ed_max);
+  ROS_INFO("Ed_min = %f", Ed_min);
   double epsilon_distance = distance - Ed_;
-  std::cout << "distance = " << distance << std::endl;
-  std::cout << "epsilon_distance = " << epsilon_distance << std::endl;
+  ROS_INFO("distance = %f", distance);
+  ROS_INFO("epsilon_distance = %f", epsilon_distance);
   // 当前位置和目标物体连线的角度
   double tao_d = std::atan2(target_state_.pos().y - ego_state_.pos().y,
                             target_state_.pos().x - ego_state_.pos().x);

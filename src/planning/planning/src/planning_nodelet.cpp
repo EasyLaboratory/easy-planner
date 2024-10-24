@@ -51,7 +51,8 @@ class Nodelet : public nodelet::Nodelet {
   // NOTE just for debug
   bool debug_ = false;
   quadrotor_msgs::ReplanState replanStateMsg_;
-  ros::Publisher gridmap_pub_, inflate_gridmap_pub_, marker_pub_;
+  ros::Publisher gridmap_pub_, inflate_gridmap_pub_, marker_pub_,
+      target_marker_pub_;
   quadrotor_msgs::OccMap3d occmap_msg_;
 
   double tracking_dur_, tracking_dist_, tolerance_d_;
@@ -95,6 +96,49 @@ class Nodelet : public nodelet::Nodelet {
     }
   }
 
+  void pub_target_point(const Eigen::Vector3d& pos, const Eigen::Vector3d& vel,
+                        const double& yaw) {
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "world";
+    marker.header.stamp = ros::Time::now();
+    marker.ns = "kinematic_arrow_target";
+    marker.id = 0;
+    // 使用箭头
+    marker.type = visualization_msgs::Marker::ARROW;
+    marker.action = visualization_msgs::Marker::ADD;
+
+    geometry_msgs::Vector3 dir;
+    dir.x = std::cos(yaw);
+    dir.y = std::sin(yaw);
+    dir.z = 0.0;
+
+    geometry_msgs::Point start, end;
+    start.x = pos.x();
+    start.y = pos.y();
+    start.z = pos.z();
+    end.x = pos.x() + dir.x;  // 箭头方向，可以根据你的需求进行修改
+    end.y = pos.y() + dir.y;
+    end.z = pos.z() + dir.z;
+
+    // 设置 Marker 的点
+    marker.points.push_back(start);
+    marker.points.push_back(end);
+
+    // 设置 Marker 的大小
+    marker.scale.x = 0.05;  // 箭头杆的直径
+    marker.scale.y = 0.1;   // 箭头的宽度
+    marker.scale.z = 0.1;   // 箭头的高度
+
+    // 设置颜色
+    marker.color.r = 1.0f;
+    marker.color.g = 1.0f;
+    marker.color.b = 0.0f;
+    marker.color.a = 1.0;  // 透明度为 1.0 表示完全不透明
+
+    // 发布 Marker
+    target_marker_pub_.publish(marker);
+  }
+
   void pub_point(const Eigen::Vector3d& pos, const Eigen::Vector3d& vel,
                  double& yaw, double& omega) {
     mavros_msgs::PositionTarget point;
@@ -133,9 +177,8 @@ class Nodelet : public nodelet::Nodelet {
     kinematic_data.omega = omega;
     kinematic_control_pub_.publish(kinematic_data);
 
-    // 现在我们在RViz中用Marker来绘制点
     visualization_msgs::Marker marker;
-    marker.header.frame_id = "world";
+    marker.header.frame_id = "world_enu";
     marker.header.stamp = ros::Time::now();
     marker.ns = "kinematic_arrow";
     marker.id = 0;
@@ -144,16 +187,16 @@ class Nodelet : public nodelet::Nodelet {
     marker.action = visualization_msgs::Marker::ADD;
 
     geometry_msgs::Vector3 dir;
-    dir.x = std::cos(yaw);
-    dir.y = std::sin(yaw);
-    dir.z = 0.0;  // 假设箭头在 XY 平面上
+    dir.x = std::cos(yaw + M_PI / 2);
+    dir.y = std::sin(yaw + M_PI / 2);
+    dir.z = 0.0;  // z 轴不涉及
 
     geometry_msgs::Point start, end;
-    start.x = pos.x();  // 起点位置，和球体时相同
+    start.x = pos.x();
     start.y = pos.y();
     start.z = pos.z();
-    end.x = pos.x() + dir.x;  // 箭头方向，可以根据你的需求进行修改
-    end.y = pos.y() + dir.y;
+    end.x = pos.x() + dir.x;  // 终点沿 x 方向
+    end.y = pos.y() + dir.y;  // 终点沿 y 方向
     end.z = pos.z() + dir.z;
 
     // 设置 Marker 的点
@@ -311,6 +354,13 @@ class Nodelet : public nodelet::Nodelet {
     target_q.x() = replanStateMsg_.target.pose.pose.orientation.x;
     target_q.y() = replanStateMsg_.target.pose.pose.orientation.y;
     target_q.z() = replanStateMsg_.target.pose.pose.orientation.z;
+    // 将四元数转换为欧拉角（roll, pitch, yaw）
+    Eigen::Vector3d euler_angles = target_q.toRotationMatrix().eulerAngles(
+        2, 1, 0);  // ZYX顺序 (yaw, pitch, roll)
+    // 提取yaw (绕Z轴旋转)
+    double target_yaw =
+        euler_angles[0];  // yaw 是 eulerAngles(2,1,0) 的第一个分量
+    // pub_target_point(target_p, target_v, target_yaw);
 
     // todo 0812 定高飞行，记得修改，原来是1.0
     target_p.z() += relative_height_;
