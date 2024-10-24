@@ -24,6 +24,9 @@ class Control {
   double flyingHeight() { return flying_height_; }
   State& egoState() { return ego_state_; }
   State& egoTargetState() { return ego_target_state_; }
+  double Ed_max() { return Ed_max_; }
+  double Ed_min() { return Ed_min_; }
+  double Ed() { return Ed_; }
 
  private:
   double dt_ = 0.02;
@@ -36,9 +39,11 @@ class Control {
   double k2_ = 1.0;
   double vmax_ = 7.0;
   double omegamax_ = 20.0;
-  double flying_height_ = 13.0;
-  double theta2_ = 70 * M_PI / 180.0;
-  double theta1_ = 40 * M_PI / 180.0;
+  double flying_height_ = 5.0;
+  double theta2_ = 85 * M_PI / 180.0;
+  double theta1_ = 75 * M_PI / 180.0;
+  double Ed_max_ = 0.0;
+  double Ed_min_ = 0.0;
   double Ed_ = 0.0;
 };
 }  // namespace Kinematic

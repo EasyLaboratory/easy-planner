@@ -96,44 +96,31 @@ class Nodelet : public nodelet::Nodelet {
     }
   }
 
-  void pub_target_point(const Eigen::Vector3d& pos, const Eigen::Vector3d& vel,
-                        const double& yaw) {
+  void pub_target_point(const Eigen::Vector3d& pos) {
     visualization_msgs::Marker marker;
-    marker.header.frame_id = "world";
+    marker.header.frame_id = "world_enu";
     marker.header.stamp = ros::Time::now();
     marker.ns = "kinematic_arrow_target";
     marker.id = 0;
     // 使用箭头
-    marker.type = visualization_msgs::Marker::ARROW;
+    marker.type = visualization_msgs::Marker::CYLINDER;
     marker.action = visualization_msgs::Marker::ADD;
 
-    geometry_msgs::Vector3 dir;
-    dir.x = std::cos(yaw);
-    dir.y = std::sin(yaw);
-    dir.z = 0.0;
+    // 设置位置
+    marker.pose.position.x = pos.x();
+    marker.pose.position.y = pos.y();
+    marker.pose.position.z = pos.z();
 
-    geometry_msgs::Point start, end;
-    start.x = pos.x();
-    start.y = pos.y();
-    start.z = pos.z();
-    end.x = pos.x() + dir.x;  // 箭头方向，可以根据你的需求进行修改
-    end.y = pos.y() + dir.y;
-    end.z = pos.z() + dir.z;
-
-    // 设置 Marker 的点
-    marker.points.push_back(start);
-    marker.points.push_back(end);
-
-    // 设置 Marker 的大小
-    marker.scale.x = 0.05;  // 箭头杆的直径
-    marker.scale.y = 0.1;   // 箭头的宽度
-    marker.scale.z = 0.1;   // 箭头的高度
+    // 设置大小
+    marker.scale.x = 1.0;   // 半径（直径）
+    marker.scale.y = 1.0;   // 半径（直径）
+    marker.scale.z = 0.01;  // 高度（非常小，确保是平面圆）
 
     // 设置颜色
-    marker.color.r = 1.0f;
-    marker.color.g = 1.0f;
-    marker.color.b = 0.0f;
-    marker.color.a = 1.0;  // 透明度为 1.0 表示完全不透明
+    marker.color.r = 0.0f;  // 红色
+    marker.color.g = 1.0f;  // 绿色
+    marker.color.b = 0.0f;  // 蓝色
+    marker.color.a = 1.0;   // 透明度（1.0 为不透明）
 
     // 发布 Marker
     target_marker_pub_.publish(marker);
@@ -354,13 +341,6 @@ class Nodelet : public nodelet::Nodelet {
     target_q.x() = replanStateMsg_.target.pose.pose.orientation.x;
     target_q.y() = replanStateMsg_.target.pose.pose.orientation.y;
     target_q.z() = replanStateMsg_.target.pose.pose.orientation.z;
-    // 将四元数转换为欧拉角（roll, pitch, yaw）
-    Eigen::Vector3d euler_angles = target_q.toRotationMatrix().eulerAngles(
-        2, 1, 0);  // ZYX顺序 (yaw, pitch, roll)
-    // 提取yaw (绕Z轴旋转)
-    double target_yaw =
-        euler_angles[0];  // yaw 是 eulerAngles(2,1,0) 的第一个分量
-    // pub_target_point(target_p, target_v, target_yaw);
 
     // todo 0812 定高飞行，记得修改，原来是1.0
     target_p.z() += relative_height_;
@@ -379,6 +359,18 @@ class Nodelet : public nodelet::Nodelet {
     replanStateMsg_.occmap = map_msg_;
     gridmap_lock_.clear();
     prePtr_->setMap(*gridmapPtr_);
+
+    // *********************设置初始状态的部分*********************
+    Position start_pos(odom_p.x(), odom_p.y(), odom_p.z());
+    Vel start_vel(odom_v.x(), odom_v.y(), odom_v.z());
+    State start_state(start_pos, start_vel, now_yaw, odom_omega.z());
+    controller_.setStartState(start_state);
+    ROS_INFO("init state, (x, y, z) = (%f,%f,%f)", odom_p.x(), odom_p.y(),
+             odom_p.z());
+    ROS_INFO("init state (vx, vy, vz) = (%f,%f,%f)", odom_v.x(), odom_v.y(),
+             odom_v.z());
+    ROS_INFO("init state now_yaw= %f", now_yaw);
+    // *********************设置初始状态的部分*********************
 
     // visualize the ray from drone to target
     if (envPtr_->checkRayValid(odom_p, target_p)) {
@@ -399,37 +391,42 @@ class Nodelet : public nodelet::Nodelet {
              generate_new_traj_success ? "true" : "false");
 
     State target_state;
-    Position target_pos(target_p.x(), target_p.y(), controller_.flyingHeight());
+    Position target_pos(target_predcit.front().x(), target_predcit.front().y(),
+                        controller_.flyingHeight());
     target_state.setPos(target_pos);
     controller_.setTargetState(target_state);
-    // *********************生成目标物体预测轨迹的部分*********************
 
+    // *********************生成目标物体预测轨迹的部分*********************
+    // for (int i = 0; i < target_predcit.size(); i++) {
+    //   ROS_INFO("target_predcit.x = %f, target_predcit.y = %f",
+    //            target_predcit.at(i).x(), target_predcit.at(i).y());
+    // }
+    // ROS_INFO("target_predcit.x = %f, target_predcit.y = %f", target_p.x(),
+    //          target_p.y());
     // *********************可视化目标物体维护一个圆范围的部分*********************
+
     if (generate_new_traj_success) {
-      Eigen::Vector3d observable_p = target_predcit.back();
+      Eigen::Vector3d observable_p = target_predcit.front();
+      pub_target_point(target_p);
       visPtr_->visualize_path(target_predcit, "car_predict");
-      std::vector<Eigen::Vector3d> observable_margin;
-      // 这儿的目的是显示一个目标位置的圈，这个圈是自己必须到达目标物体俯视图的范围
+
+      std::vector<Eigen::Vector3d> observable_margin_max;
       for (double theta = 0; theta <= 2 * M_PI; theta += 0.01) {
-        observable_margin.emplace_back(
+        observable_margin_max.emplace_back(
             observable_p +
-            tracking_dist_ * Eigen::Vector3d(cos(theta), sin(theta), 0));
+            controller_.Ed_max() * Eigen::Vector3d(cos(theta), sin(theta), 0));
       }
-      visPtr_->visualize_path(observable_margin, "observable_margin");
+      visPtr_->visualize_path(observable_margin_max, "observable_margin_max");
+
+      std::vector<Eigen::Vector3d> observable_margin_min;
+      for (double theta = 0; theta <= 2 * M_PI; theta += 0.01) {
+        observable_margin_min.emplace_back(
+            observable_p +
+            controller_.Ed_min() * Eigen::Vector3d(cos(theta), sin(theta), 0));
+      }
+      visPtr_->visualize_path(observable_margin_min, "observable_margin_min");
     }
     // *********************可视化目标物体维护一个圆范围的部分*********************
-
-    // *********************设置初始状态的部分*********************
-    Position start_pos(odom_p.x(), odom_p.y(), odom_p.z());
-    Vel start_vel(odom_v.x(), odom_v.y(), odom_v.z());
-    State start_state(start_pos, start_vel, now_yaw, odom_omega.z());
-    controller_.setStartState(start_state);
-    ROS_INFO("init state, (x, y, z) = (%f,%f,%f)", odom_p.x(), odom_p.y(),
-             odom_p.z());
-    ROS_INFO("init state (vx, vy, vz) = (%f,%f,%f)", odom_v.x(), odom_v.y(),
-             odom_v.z());
-    ROS_INFO("init state now_yaw= %f", now_yaw);
-    // *********************设置初始状态的部分*********************
 
     // *********************kinematic控制的部分*********************
     bool generate_new_point_success = false;
@@ -1410,6 +1407,8 @@ class Nodelet : public nodelet::Nodelet {
         nh.advertise<mavros_msgs::PositionTarget>("/command/trajectory", 50);
     marker_pub_ =
         nh.advertise<visualization_msgs::Marker>("visualization_marker", 1);
+    target_marker_pub_ = nh.advertise<visualization_msgs::Marker>(
+        "target_visualization_marker", 1);
     kinematic_control_pub_ =
         nh.advertise<quadrotor_msgs::Kinematic>("kinematic_data", 1);
     replanState_pub_ =

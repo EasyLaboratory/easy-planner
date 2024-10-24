@@ -60,12 +60,12 @@ void Control::updateState() {
 void Control::KinematicControl() {
   // 这些是为了让无人机在目标后面的一定范围内，根据高度确定跟踪范围
   double distance = calDistance(ego_state_.pos(), target_state_.pos());
-  double Ed_max = ego_state_.pos().z * std::tan(theta2_);
-  double Ed_min = ego_state_.pos().z * std::tan(theta1_);
-  if (distance < Ed_min) {
-    Ed_ = Ed_min;
-  } else if (distance > Ed_max) {
-    Ed_ = Ed_max;
+  Ed_max_ = ego_state_.pos().z * std::tan(theta2_);
+  Ed_min_ = ego_state_.pos().z * std::tan(theta1_);
+  if (distance < Ed_min_) {
+    Ed_ = Ed_min_;
+  } else if (distance > Ed_max_) {
+    Ed_ = Ed_max_;
   } else {
     Ed_ = 0.0;
   }
@@ -124,17 +124,17 @@ void Control::generateEgoTargetState() {
 bool Control::Kinematic() {
   // 这些是为了让无人机在目标后面的一定范围内，根据高度确定跟踪范围
   double distance = calDistance(ego_state_.pos(), target_state_.pos());
-  double Ed_max = ego_state_.pos().z * std::tan(theta2_);
-  double Ed_min = ego_state_.pos().z * std::tan(theta1_);
-  if (distance < Ed_min) {
-    Ed_ = Ed_min;
-  } else if (distance > Ed_max) {
-    Ed_ = Ed_max;
+  Ed_max_ = ego_state_.pos().z * std::tan(theta2_);
+  Ed_min_ = ego_state_.pos().z * std::tan(theta1_);
+  if (distance < Ed_min_) {
+    Ed_ = Ed_min_;
+  } else if (distance > Ed_max_) {
+    Ed_ = Ed_max_;
   } else {
     Ed_ = 0.0;
   }
-  ROS_INFO("Ed_max = %f", Ed_max);
-  ROS_INFO("Ed_min = %f", Ed_min);
+  ROS_INFO("Ed_max = %f", Ed_max_);
+  ROS_INFO("Ed_min = %f", Ed_min_);
   double epsilon_distance = distance - Ed_;
   ROS_INFO("distance = %f", distance);
   ROS_INFO("epsilon_distance = %f", epsilon_distance);
