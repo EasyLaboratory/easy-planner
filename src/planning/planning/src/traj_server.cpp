@@ -1,5 +1,6 @@
 #include <mavros_msgs/PositionTarget.h>
 #include <nav_msgs/Odometry.h>
+#include <quadrotor_msgs/Kinematic.h>
 #include <quadrotor_msgs/PolyTraj.h>
 #include <quadrotor_msgs/PositionCommand.h>
 #include <ros/ros.h>
@@ -17,6 +18,7 @@ ros::Time heartbeat_time_;
 bool receive_traj_ = false;
 bool flight_start_ = false;
 quadrotor_msgs::PolyTraj trajMsg_, trajMsg_last_;
+quadrotor_msgs::Kinematic kinematicMsg_, kinematicMsg_last_;
 Eigen::Vector3d last_p_;
 // TODO(fxj)
 // 这是游戏、仿真或者实际中的yaw的起始航向角，因为在airsim中的方向恰好和代码中整个坐标系转换了一下，
@@ -155,6 +157,14 @@ void heartbeatCallback(const std_msgs::EmptyConstPtr &msg) {
   heartbeat_time_ = ros::Time::now();
 }
 
+void kinematicPointCallback(const quadrotor_msgs::KinematicConstPtr &msgPtr) {
+  kinematicMsg_ = *msgPtr;
+  if (!receive_traj_) {
+    kinematicMsg_last_ = kinematicMsg_;
+    receive_traj_ = true;
+  }
+}
+
 void polyTrajCallback(const quadrotor_msgs::PolyTrajConstPtr &msgPtr) {
   trajMsg_ = *msgPtr;
   if (!receive_traj_) {
@@ -191,8 +201,10 @@ int main(int argc, char **argv) {
   // 这个句柄是用来发送给airsim的。
   ros::NodeHandle n;
 
-  ros::Subscriber poly_traj_sub =
-      nh.subscribe("trajectory", 10, polyTrajCallback);
+  // ros::Subscriber poly_traj_sub =
+  //     nh.subscribe("trajectory", 10, polyTrajCallback);
+  ros::Subscriber kinematic_sub =
+      nh.subscribe("trajectory", 10, kinematicPointCallback);
   ros::Subscriber heartbeat_sub =
       nh.subscribe("heartbeat", 10, heartbeatCallback);
 
