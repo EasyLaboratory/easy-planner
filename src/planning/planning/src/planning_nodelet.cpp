@@ -429,11 +429,11 @@ class Nodelet : public nodelet::Nodelet {
 
       // ros::Time t_front3 = ros::Time::now();
       envPtr_->generateSFC(path, 2.0, hPolys, keyPts);
-      for (size_t i = 0; i < path.size(); ++i) {
-        const Eigen::Vector3d& vec = path[i];
-        ROS_INFO("A STAR path[%zu]: [%f, %f, %f]", i, vec.x(), vec.y(),
-                 vec.z());
-      }
+      // for (size_t i = 0; i < path.size(); ++i) {
+      //   const Eigen::Vector3d& vec = path[i];
+      //   ROS_INFO("A STAR path[%zu]: [%f, %f, %f]", i, vec.x(), vec.y(),
+      //            vec.z());
+      // }
       ROS_INFO("hPolys.size() = %lu", hPolys.size());
       ROS_INFO("keyPts.size() = %lu", keyPts.size());
       for (size_t i = 0; i < keyPts.size(); ++i) {

@@ -290,10 +290,10 @@ void TrajOpt::setBoundConds(const Eigen::MatrixXd& iniState,
 
   Eigen::VectorXd T(N_);
   T.setConstant(sum_T_ / N_);
-  for (int i = 0; i < T.size(); ++i) {
-    double value = T[i];
-    ROS_INFO("T[%d] = %f", i, value);
-  }
+  // for (int i = 0; i < T.size(); ++i) {
+  //   double value = T[i];
+  //   ROS_INFO("T[%d] = %f", i, value);
+  // }
   backwardT(T, t_);
   Eigen::MatrixXd P(3, N_ - 1);
   for (int i = 0; i < N_ - 1; ++i) {
@@ -363,20 +363,20 @@ bool TrajOpt::generate_traj(const Eigen::MatrixXd& iniState,
       ROS_INFO("%s", ss.str().c_str());
     }
   }
-  for (size_t i = 0; i < cfgVs_.size(); ++i) {
-    const Eigen::MatrixXd& matrix = cfgVs_[i];
-    ROS_INFO("speed sequence cfgVs[%zu]: ", i);
-    for (int row = 0; row < matrix.rows(); ++row) {
-      std::stringstream ss;
-      for (int col = 0; col < matrix.cols(); ++col) {
-        ss << matrix(row, col);
-        if (col < matrix.cols() - 1) {
-          ss << ", ";
-        }
-      }
-      ROS_INFO("%s", ss.str().c_str());
-    }
-  }
+  // for (size_t i = 0; i < cfgVs_.size(); ++i) {
+  //   const Eigen::MatrixXd& matrix = cfgVs_[i];
+  //   ROS_INFO("speed sequence cfgVs[%zu]: ", i);
+  //   for (int row = 0; row < matrix.rows(); ++row) {
+  //     std::stringstream ss;
+  //     for (int col = 0; col < matrix.cols(); ++col) {
+  //       ss << matrix(row, col);
+  //       if (col < matrix.cols() - 1) {
+  //         ss << ", ";
+  //       }
+  //     }
+  //     ROS_INFO("%s", ss.str().c_str());
+  //   }
+  // }
   N_ = 2 * cfgHs_.size();
   // NOTE wonderful trick
   sum_T_ = tracking_dur_;

@@ -33,14 +33,14 @@
     <param name="rhosVisibility" value="$(arg rhosVisibility_)"/>
     <param name="theta_clearance" value="0.8"/>
     <param name="clearance_d" value="0.2"/>
-    <param name="tolerance_d" value="0.5"/>
-    <param name="tracking_dist" value="6.0"/>
+    <param name="tolerance_d" value="3"/>
+    <param name="tracking_dist" value="15.0"/>
     <param name="tracking_dur" value="5.0"/>
     <param name="tracking_dt" value="0.2"/>
     <param name="relative_height" value="5.0"/>
     <param name="debug" value="false"/>
     <param name="prediction/rho_a" value="1.0"/>
-    <param name="prediction/vmax" value="12.0"/>
+    <param name="prediction/vmax" value="18.0"/>
 
   </node>
   <node pkg="planning" name="traj_server" type="traj_server" output="screen">
