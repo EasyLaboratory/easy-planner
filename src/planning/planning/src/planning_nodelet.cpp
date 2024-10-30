@@ -382,8 +382,8 @@ class Nodelet : public nodelet::Nodelet {
     // *********************生成目标物体预测轨迹的部分*********************
     std::vector<Eigen::Vector3d> target_predcit;
     ros::Time t_start = ros::Time::now();
-    bool generate_new_traj_success =
-        prePtr_->predict(target_p, target_v, target_predcit);
+    bool generate_new_traj_success = true;
+    // prePtr_->predict(target_p, target_v, target_predcit);
     ros::Time t_stop = ros::Time::now();
     double cost_time = (t_stop - t_start).toSec() * 1e3;
     ROS_INFO("predict cost time: %f ms", cost_time);
@@ -391,9 +391,10 @@ class Nodelet : public nodelet::Nodelet {
              generate_new_traj_success ? "true" : "false");
 
     State target_state;
-    Position target_pos(target_predcit.front().x(), target_predcit.front().y(),
-                        controller_.flyingHeight());
+    Position target_pos(target_p.x(), target_p.y(), controller_.flyingHeight());
+    Vel target_vel(target_v.x(), target_v.y(), target_v.z());
     target_state.setPos(target_pos);
+    target_state.setVel(target_vel);
     controller_.setTargetState(target_state);
 
     // *********************生成目标物体预测轨迹的部分*********************
@@ -406,9 +407,9 @@ class Nodelet : public nodelet::Nodelet {
     // *********************可视化目标物体维护一个圆范围的部分*********************
 
     if (generate_new_traj_success) {
-      Eigen::Vector3d observable_p = target_predcit.front();
+      Eigen::Vector3d observable_p = target_p;
       pub_target_point(target_p);
-      visPtr_->visualize_path(target_predcit, "car_predict");
+      // visPtr_->visualize_path(target_predcit, "car_predict");
 
       std::vector<Eigen::Vector3d> observable_margin_max;
       for (double theta = 0; theta <= 2 * M_PI; theta += 0.01) {
@@ -1443,14 +1444,14 @@ class Nodelet : public nodelet::Nodelet {
         &Nodelet::airsim_odom_callback, this,
         ros::TransportHints().tcpNoDelay());
     target_sub_ = nh.subscribe<nav_msgs::Odometry>(
-        "target", 10, &Nodelet::target_callback, this,
+        "raw_target", 10, &Nodelet::target_callback, this,
         ros::TransportHints().tcpNoDelay());
-    triger_sub_ = nh.subscribe<geometry_msgs::PoseStamped>(
-        "triger", 10, &Nodelet::triger_callback, this,
-        ros::TransportHints().tcpNoDelay());
-    land_triger_sub_ = nh.subscribe<geometry_msgs::PoseStamped>(
-        "land_triger", 10, &Nodelet::land_triger_callback, this,
-        ros::TransportHints().tcpNoDelay());
+    // triger_sub_ = nh.subscribe<geometry_msgs::PoseStamped>(
+    //     "triger", 10, &Nodelet::triger_callback, this,
+    //     ros::TransportHints().tcpNoDelay());
+    // land_triger_sub_ = nh.subscribe<geometry_msgs::PoseStamped>(
+    //     "land_triger", 10, &Nodelet::land_triger_callback, this,
+    //     ros::TransportHints().tcpNoDelay());
     ROS_WARN("Planning node initialized!");
   }
 

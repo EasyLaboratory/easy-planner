@@ -60,8 +60,10 @@ void Control::updateState() {
 void Control::KinematicControl() {
   // 这些是为了让无人机在目标后面的一定范围内，根据高度确定跟踪范围
   double distance = calDistance(ego_state_.pos(), target_state_.pos());
-  Ed_max_ = ego_state_.pos().z * std::tan(theta2_);
-  Ed_min_ = ego_state_.pos().z * std::tan(theta1_);
+  // Ed_max_ = ego_state_.pos().z * std::tan(theta2_);
+  // Ed_min_ = ego_state_.pos().z * std::tan(theta1_);
+  Ed_max_ = 6 * std::tan(theta2_);
+  Ed_min_ = 6 * std::tan(theta1_);
   if (distance < Ed_min_) {
     Ed_ = Ed_min_;
   } else if (distance > Ed_max_) {

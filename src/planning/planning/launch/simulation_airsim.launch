@@ -14,23 +14,27 @@
       <param name="car_mesh_resource" value="package://odom_visualization/meshes/car.dae"/>
       <param name="robot_scale" value="1.0"/>
     </node>
-    <node pkg="target_ekf" name="target_ekf_sim_node" type="target_ekf_sim_node" output="screen">
-      <rosparam command="load" file="$(find target_ekf)/config/camera.yaml" />
+    <!-- <node pkg="target_ekf" name="target_ekf_sim_node" type="target_ekf_sim_node" output="screen"> -->
+      <!-- <rosparam command="load" file="$(find target_ekf)/config/camera.yaml" /> -->
       <!-- 这个值没有被用到 -->
-      <param name="pitch_thr" value="37"/>
+      <!-- <param name="pitch_thr" value="37"/> -->
       <!-- 这个是相机得到的数据 -->
       <!-- <remap from="~yolo" to="/target/odom_airsim"/> -->
       <!-- 这个是真值 -->
-      <remap from="~yolo" to="/easysim_ros_wrapper/player_odom"/>
+      <!-- <remap from="~yolo" to="/easysim_ros_wrapper/player_odom"/> -->
     <!-- 往出去发的 -->
-      <remap from="~odom" to="odom"/>
-      <remap from="~target_odom" to="/target_ekf_odom"/>
-    </node>
+      <!-- <remap from="~odom" to="odom"/> -->
+      <!-- <remap from="~target_odom" to="/target_ekf_odom"/> -->
+    <!-- </node> -->
     
     <include file="$(find planning)/launch/planning_airsim.launch">
       <arg name="rhosVisibility_" value="10000.0"/>
       <arg name="rhoTracking_" value="1000.0"/>
       <arg name="target_name_" value="/target_ekf_odom"/>
+      <!-- 这个是相机得到的数据 -->
+      <!-- <remap from="raw_target" to="/target/odom_airsim"/> -->
+      <!-- 这个是真值 -->
+      <remap from="~raw_target" to="/easysim_ros_wrapper/player_odom"/>
     </include>
   </group>
   

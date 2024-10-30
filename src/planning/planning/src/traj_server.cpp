@@ -174,24 +174,24 @@ void polyTrajCallback(const quadrotor_msgs::PolyTrajConstPtr &msgPtr) {
 }
 
 void cmdCallback(const ros::TimerEvent &e) {
-  if (!receive_traj_) {
-    ROS_WARN("we dont receive traj!!");
-    return;
-  }
-  ros::Time time_now = ros::Time::now();
-  if ((time_now - heartbeat_time_).toSec() > 0.5) {
-    ROS_ERROR_ONCE(
-        "[traj_server] Lost heartbeat from the planner, is he dead?");
-    publish_cmd(trajMsg_.traj_id, last_p_, Eigen::Vector3d::Zero(),
-                Eigen::Vector3d::Zero(), 0, 0);  // TODO yaw
-    return;
-  }
-  if (exe_traj(trajMsg_)) {
-    trajMsg_last_ = trajMsg_;
-    return;
-  } else if (exe_traj(trajMsg_last_)) {
-    return;
-  }
+  // if (!receive_traj_) {
+  //   ROS_WARN("we dont receive traj!!");
+  //   // return;
+  // }
+  // ros::Time time_now = ros::Time::now();
+  // if ((time_now - heartbeat_time_).toSec() > 0.5) {
+  //   ROS_ERROR_ONCE(
+  //       "[traj_server] Lost heartbeat from the planner, is he dead?");
+  //   publish_cmd(trajMsg_.traj_id, last_p_, Eigen::Vector3d::Zero(),
+  //               Eigen::Vector3d::Zero(), 0, 0);  // TODO yaw
+  //   return;
+  // }
+  // if (exe_traj(trajMsg_)) {
+  //   trajMsg_last_ = trajMsg_;
+  //   return;
+  // } else if (exe_traj(trajMsg_last_)) {
+  //   return;
+  // }
 }
 
 // 这个函数的功能是给rviz中的目标或者ego发送轨迹。
@@ -204,7 +204,7 @@ int main(int argc, char **argv) {
   // ros::Subscriber poly_traj_sub =
   //     nh.subscribe("trajectory", 10, polyTrajCallback);
   ros::Subscriber kinematic_sub =
-      nh.subscribe("trajectory", 10, kinematicPointCallback);
+      nh.subscribe("kinematic_data", 10, kinematicPointCallback);
   ros::Subscriber heartbeat_sub =
       nh.subscribe("heartbeat", 10, heartbeatCallback);
 
@@ -212,8 +212,8 @@ int main(int argc, char **argv) {
   pos_cmd_pub_ =
       nh.advertise<quadrotor_msgs::PositionCommand>("position_cmd", 50);
   // 这个是我的加的给airsim的
-  airsim_pos_cmd_pub_ =
-      n.advertise<mavros_msgs::PositionTarget>("/command/trajectory", 50);
+  // airsim_pos_cmd_pub_ =
+  //     n.advertise<mavros_msgs::PositionTarget>("/command/trajectory", 50);
 
   // 定时去收位置请求。
   ros::Timer cmd_timer = nh.createTimer(ros::Duration(0.05), cmdCallback);

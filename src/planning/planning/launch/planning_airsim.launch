@@ -41,6 +41,10 @@
     <param name="debug" value="false"/>
     <param name="prediction/rho_a" value="1.0"/>
     <param name="prediction/vmax" value="12.0"/>
+        <!-- 这个是相机得到的数据 -->
+    <!-- <remap from="raw_target" to="/target/odom_airsim"/> -->
+    <!-- 这个是真值 -->
+    <remap from="~raw_target" to="/easysim_ros_wrapper/player_odom"/>
 
   </node>
   <node pkg="planning" name="traj_server" type="traj_server" output="screen">

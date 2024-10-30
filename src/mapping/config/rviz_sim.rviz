@@ -1132,7 +1132,7 @@ Visualization Manager:
       Unreliable: false
       Value: false
     - Class: rviz/Image
-      Enabled: true
+      Enabled: false
       Image Topic: /annotated_image
       Max Value: 1
       Median window: 5
@@ -1142,7 +1142,7 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: raw
       Unreliable: false
-      Value: true
+      Value: false
     - Alpha: 1
       Axes Length: 1
       Axes Radius: 0.10000000149011612
@@ -1240,7 +1240,7 @@ Visualization Manager:
           Scale: 1
           Value: true
         Value: true
-      Enabled: true
+      Enabled: false
       Keep: 1
       Name: Detect_Odom
       Position Tolerance: 0.10000000149011612
@@ -1257,9 +1257,9 @@ Visualization Manager:
         Value: Arrow
       Topic: /target/odom_airsim
       Unreliable: false
-      Value: true
+      Value: false
     - Class: rviz/Image
-      Enabled: false
+      Enabled: true
       Image Topic: /annotated_image
       Max Value: 1
       Median window: 5
@@ -1269,7 +1269,7 @@ Visualization Manager:
       Queue Size: 2
       Transport Hint: raw
       Unreliable: false
-      Value: false
+      Value: true
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /drone0/planning/visualization_marker
@@ -1330,9 +1330,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.035399079322815
+      Pitch: 1.0303990840911865
       Target Frame: drone_1/odom_local_enu
-      Yaw: 5.538575172424316
+      Yaw: 5.543575286865234
     Saved: ~
 Window Geometry:
   Displays:

@@ -41,7 +41,7 @@ class Control {
   double omegamax_ = 20.0;
   double flying_height_ = 5.0;
   double theta2_ = 85 * M_PI / 180.0;
-  double theta1_ = 75 * M_PI / 180.0;
+  double theta1_ = 82 * M_PI / 180.0;
   double Ed_max_ = 0.0;
   double Ed_min_ = 0.0;
   double Ed_ = 0.0;

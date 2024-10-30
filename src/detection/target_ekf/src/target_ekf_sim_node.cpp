@@ -23,42 +23,47 @@ std::shared_ptr<Ekf> ekfPtr_;
 
 // 定时启动的回调函数
 void predict_state_callback(const ros::TimerEvent& event) {
-  double update_dt = (ros::Time::now() - last_update_stamp_).toSec();
-  // 如果更新时间小于2s, 利用卡尔曼滤波进行预测，并且利用卡尔曼滤波更新速度和位置信息
-  if (update_dt < 2.0) {
-    ekfPtr_->predict();
-  } else {
-    ROS_WARN("[ekf] too long time target position no update!");
-    return;
-  }
-  // publish target odom
-  nav_msgs::Odometry target_odom;
-  target_odom.header.stamp = ros::Time::now();
-  target_odom.header.frame_id = "world";
-  target_odom.pose.pose.position.x = ekfPtr_->pos().x();
-  target_odom.pose.pose.position.y = ekfPtr_->pos().y();
-  // target_odom.pose.pose.position.z = ekfPtr_->pos().z();
-  target_odom.pose.pose.position.z = 5.0;
+  // double update_dt = (ros::Time::now() - last_update_stamp_).toSec();
+  // // 如果更新时间小于2s,
+  // 利用卡尔曼滤波进行预测，并且利用卡尔曼滤波更新速度和位置信息 if (update_dt
+  // < 2.0) {
+  //   ekfPtr_->predict();
+  // } else {
+  //   ROS_WARN("[ekf] too long time target position no update!");
+  //   return;
+  // }
+  // // publish target odom
+  // nav_msgs::Odometry target_odom;
+  // target_odom.header.stamp = ros::Time::now();
+  // target_odom.header.frame_id = "world";
+  // target_odom.pose.pose.position.x = ekfPtr_->pos().x();
+  // target_odom.pose.pose.position.y = ekfPtr_->pos().y();
+  // // target_odom.pose.pose.position.z = ekfPtr_->pos().z();
+  // target_odom.pose.pose.position.z = 5.0;
 
-  target_odom.twist.twist.linear.x = ekfPtr_->vel().x();
-  target_odom.twist.twist.linear.y = ekfPtr_->vel().y();
-  target_odom.twist.twist.linear.z = ekfPtr_->vel().z();
-  Eigen::Vector3d rpy = ekfPtr_->rpy();
-  Eigen::Quaterniond q = euler2quaternion(rpy);
-  ROS_INFO("through kalam target (x,y,z) = (%f, %f, %f), (vx, vy, vz) = (%f, %f, %f), (roll, pitch, yaw) = (%f, %f, %f)", ekfPtr_->pos().x(), ekfPtr_->pos().y(),
-           ekfPtr_->pos().z(), ekfPtr_->vel().x(), ekfPtr_->vel().y(),
-           ekfPtr_->vel().z(), rpy.x(), rpy.y(),
-           rpy.z());
-  // ROS_INFO("through kalam target vel (vx, vy, vz) = (%f,%f,%f)", ekfPtr_->vel().x(), ekfPtr_->vel().y(),
-  //          ekfPtr_->vel().z());
-  // ROS_INFO("through kalam target vel = %f", ekfPtr_->vel().norm());
-  // ROS_INFO("through kalam target rpy (roll, pitch, yaw) = (%f,%f,%f)", rpy.x(), rpy.y(),
+  // target_odom.twist.twist.linear.x = ekfPtr_->vel().x();
+  // target_odom.twist.twist.linear.y = ekfPtr_->vel().y();
+  // target_odom.twist.twist.linear.z = ekfPtr_->vel().z();
+  // Eigen::Vector3d rpy = ekfPtr_->rpy();
+  // Eigen::Quaterniond q = euler2quaternion(rpy);
+  // ROS_INFO("through kalam target (x,y,z) = (%f, %f, %f), (vx, vy, vz) = (%f,
+  // %f, %f), (roll, pitch, yaw) = (%f, %f, %f)", ekfPtr_->pos().x(),
+  // ekfPtr_->pos().y(),
+  //          ekfPtr_->pos().z(), ekfPtr_->vel().x(), ekfPtr_->vel().y(),
+  //          ekfPtr_->vel().z(), rpy.x(), rpy.y(),
   //          rpy.z());
-  target_odom.pose.pose.orientation.w = q.w();
-  target_odom.pose.pose.orientation.x = q.x();
-  target_odom.pose.pose.orientation.y = q.y();
-  target_odom.pose.pose.orientation.z = q.z();
-  target_odom_pub_.publish(target_odom);
+  // // ROS_INFO("through kalam target vel (vx, vy, vz) = (%f,%f,%f)",
+  // ekfPtr_->vel().x(), ekfPtr_->vel().y(),
+  // //          ekfPtr_->vel().z());
+  // // ROS_INFO("through kalam target vel = %f", ekfPtr_->vel().norm());
+  // // ROS_INFO("through kalam target rpy (roll, pitch, yaw) = (%f,%f,%f)",
+  // rpy.x(), rpy.y(),
+  // //          rpy.z());
+  // target_odom.pose.pose.orientation.w = q.w();
+  // target_odom.pose.pose.orientation.x = q.x();
+  // target_odom.pose.pose.orientation.y = q.y();
+  // target_odom.pose.pose.orientation.z = q.z();
+  // target_odom_pub_.publish(target_odom);
 }
 
 // 同步处理yolo和odom的回调函数,处理目标物体的位置和定位信息
@@ -89,13 +94,19 @@ void update_state_callback(const nav_msgs::OdometryConstPtr& target_msg,
   q.y() = target_msg->pose.pose.orientation.y;
   q.z() = target_msg->pose.pose.orientation.z;
   Eigen::Vector3d rpy = quaternion2euler(q);
-  ROS_INFO("origin target (x, y, z) = (%f, %f, %f), (roll, pitch, yaw) = (%f, %f, %f), (vx, vy, vz)= (%f, %f, %f)", p.x(), p.y(),
-           p.z(), rpy.x(), rpy.y(), rpy.z(),
-            target_msg->twist.twist.linear.x, target_msg->twist.twist.linear.y, target_msg->twist.twist.linear.z);
-  // ROS_INFO("origin target rpy (roll, pitch, yaw) = (%f,%f,%f)", rpy.x(), rpy.y(),
+  ROS_INFO(
+      "origin target (x, y, z) = (%f, %f, %f), (roll, pitch, yaw) = (%f, %f, "
+      "%f), (vx, vy, vz)= (%f, %f, %f)",
+      p.x(), p.y(), p.z(), rpy.x(), rpy.y(), rpy.z(),
+      target_msg->twist.twist.linear.x, target_msg->twist.twist.linear.y,
+      target_msg->twist.twist.linear.z);
+  // ROS_INFO("origin target rpy (roll, pitch, yaw) = (%f,%f,%f)", rpy.x(),
+  // rpy.y(),
   //          rpy.z());
   // ROS_INFO("origin target (vx, vy, vz)= (%f, %f, %f)"
-  //          , target_msg->twist.twist.linear.x, target_msg->twist.twist.linear.y, target_msg->twist.twist.linear.z);
+  //          , target_msg->twist.twist.linear.x,
+  //          target_msg->twist.twist.linear.y,
+  //          target_msg->twist.twist.linear.z);
   // NOTE check whether it's in FOV
   // check_fov_ = false 这个函数没有进来
   if (check_fov_) {
@@ -115,16 +126,16 @@ void update_state_callback(const nav_msgs::OdometryConstPtr& target_msg,
 
   // update target odom，得到目标物的信息
   double update_dt = (ros::Time::now() - last_update_stamp_).toSec();
-  if (update_dt > 5.0) {
-    ekfPtr_->reset(p, rpy);
-    ROS_WARN("[ekf] reset!");
-  } else if (ekfPtr_->update(p, rpy)) {
-    // 这就是代表目标位置实际更新了！！！
-    ROS_WARN("[ekf] update!");
-  } else {
-    ROS_ERROR("[ekf] update invalid!");
-    return;
-  }
+  // if (update_dt > 5.0) {
+  //   ekfPtr_->reset(p, rpy);
+  //   ROS_WARN("[ekf] reset!");
+  // } else if (ekfPtr_->update(p, rpy)) {
+  //   // 这就是代表目标位置实际更新了！！！
+  //   ROS_WARN("[ekf] update!");
+  // } else {
+  //   ROS_ERROR("[ekf] update invalid!");
+  //   return;
+  // }
   last_update_stamp_ = ros::Time::now();
 }
 
